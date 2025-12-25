@@ -20,15 +20,47 @@ ve uygun çek vadesi önerileri alabilirsiniz.
 
 st.divider()
 
-# Sidebar - Çek vade tarihi seçimi
+# Sidebar - Çek bilgileri
 with st.sidebar:
-    st.header("⚙️ Ayarlar")
-    cek_vade_tarihi = st.date_input(
-        "Çek Vade Tarihi",
-        value=datetime.now().date() + timedelta(days=45),
-        help="Müşteriden alınacak çekin vade tarihi"
-    )
-    st.info("💡 Çek vade tarihi, müşteriden alacağınız çekin vadesidir.")
+    st.header("⚙️ Çek Bilgileri")
+    
+    # Çek listesi için session state
+    if 'cekler' not in st.session_state:
+        st.session_state.cekler = []
+    
+    with st.form("cek_form"):
+        st.subheader("➕ Çek Ekle")
+        cek_no = st.text_input("Çek No", placeholder="örn: ÇEK-001")
+        cek_tutari = st.number_input("Çek Tutarı (₺)", min_value=0.0, step=1000.0, format="%.2f")
+        cek_vade_tarihi = st.date_input(
+            "Çek Vade Tarihi",
+            value=datetime.now().date() + timedelta(days=45)
+        )
+        
+        if st.form_submit_button("Çek Ekle", use_container_width=True):
+            if cek_no and cek_tutari > 0:
+                st.session_state.cekler.append({
+                    'Çek No': cek_no,
+                    'Tutar': cek_tutari,
+                    'Vade Tarihi': cek_vade_tarihi.strftime('%d.%m.%Y'),
+                    'Vade Tarihi Raw': cek_vade_tarihi
+                })
+                st.success(f"✅ {cek_no} eklendi!")
+                st.rerun()
+    
+    if st.session_state.cekler:
+        st.markdown("#### 📋 Eklenen Çekler")
+        for idx, cek in enumerate(st.session_state.cekler):
+            st.text(f"{cek['Çek No']}: ₺{cek['Tutar']:,.0f} - {cek['Vade Tarihi']}")
+        
+        if st.button("🗑️ Tüm Çekleri Temizle", type="secondary", use_container_width=True):
+            st.session_state.cekler = []
+            st.rerun()
+    else:
+        st.info("💡 Müşteriden alacağınız çekleri ekleyin")
+    
+    st.divider()
+    st.info("💡 Birden fazla çek ekleyerek faturaları çeklere dağıtabilirsiniz.")
 
 # Ana içerik
 col1, col2 = st.columns([2, 1])
@@ -75,21 +107,15 @@ with col1:
         
         if submitted:
             if fatura_no and fatura_tutari > 0:
-                # Hesaplama 1: Fatura Tarihi - Valör Tarihi
-                vade_gun_valor = (valor_tarihi_input - fatura_tarihi_input).days
-                
-                # Hesaplama 2: Fatura Tarihi - Çek Vade Tarihi
-                vade_gun_cek = (cek_vade_tarihi - fatura_tarihi_input).days
-                
                 st.session_state.faturalar.append({
                     'Fatura No': fatura_no,
                     'Tutar': fatura_tutari,
                     'Fatura Tarihi': fatura_tarihi_input.strftime('%d.%m.%Y'),
                     'Valör Tarihi': valor_tarihi_input.strftime('%d.%m.%Y'),
-                    'Vade (Gün) - Valör': vade_gun_valor,
-                    'Vade (Gün) - Çek': vade_gun_cek
+                    'Fatura Tarihi Raw': fatura_tarihi_input,
+                    'Valör Tarihi Raw': valor_tarihi_input
                 })
-                st.success(f"✅ {fatura_no} eklendi! (Valör: {vade_gun_valor} gün, Çek: {vade_gun_cek} gün)")
+                st.success(f"✅ {fatura_no} eklendi!")
                 st.rerun()
             else:
                 st.error("⚠️ Lütfen fatura numarası ve geçerli bir tutar girin!")
@@ -115,70 +141,84 @@ with col1:
 with col2:
     st.subheader("💰 Hesaplama Sonuçları")
     
-    if st.session_state.faturalar:
-        # Hesaplamaları yap
-        df = pd.DataFrame(st.session_state.faturalar)
-        tutarlar = df['Tutar'].tolist()
-        vadeler_valor = df['Vade (Gün) - Valör'].tolist()
-        vadeler_cek = df['Vade (Gün) - Çek'].tolist()
+    if st.session_state.faturalar and st.session_state.cekler:
+        # DataFrame oluştur
+        df_faturalar = pd.DataFrame(st.session_state.faturalar)
+        df_cekler = pd.DataFrame(st.session_state.cekler)
         
-        toplam_tutar = calculations.toplam_tutar_hesapla(tutarlar)
+        # Hesaplamalar için raw tarihleri kullan
+        toplam_fatura = df_faturalar['Tutar'].sum()
+        toplam_cek = df_cekler['Tutar'].sum()
         
-        # Hesaplama 1: Fatura → Valör arası ortalama vade
-        ortalama_vade_valor = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_valor)
+        # Her fatura için her çek ile vade hesapla
+        hesaplamalar = []
+        for _, fatura in df_faturalar.iterrows():
+            fatura_tarihi = fatura['Fatura Tarihi Raw']
+            valor_tarihi = fatura['Valör Tarihi Raw']
+            
+            for _, cek in df_cekler.iterrows():
+                cek_vade_tarihi = cek['Vade Tarihi Raw']
+                
+                vade_gun_valor = (valor_tarihi - fatura_tarihi).days
+                vade_gun_cek = (cek_vade_tarihi - fatura_tarihi).days
+                
+                hesaplamalar.append({
+                    'Fatura No': fatura['Fatura No'],
+                    'Fatura Tutar': fatura['Tutar'],
+                    'Çek No': cek['Çek No'],
+                    'Çek Tutar': cek['Tutar'],
+                    'Çek Vade': cek['Vade Tarihi'],
+                    'Vade (Gün) - Valör': vade_gun_valor,
+                    'Vade (Gün) - Çek': vade_gun_cek
+                })
         
-        # Hesaplama 2: Fatura → Çek arası ortalama vade
-        ortalama_vade_cek = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_cek)
+        df_hesap = pd.DataFrame(hesaplamalar)
         
-        # Sonuçları göster
-        st.metric(label="Toplam Fatura Tutarı", value=f"₺{toplam_tutar:,.2f}")
+        # Özet metrikler
+        st.metric("Toplam Fatura", f"₺{toplam_fatura:,.2f}")
         
         col_a, col_b = st.columns(2)
         with col_a:
-            st.metric(
-                label="📅 Ortalama Valör Vadesi", 
-                value=f"{ortalama_vade_valor:.1f} gün",
-                help="Fatura tarihi ile valör tarihi arasındaki ortalama"
-            )
+            st.metric("Toplam Çek", f"₺{toplam_cek:,.2f}")
         with col_b:
-            st.metric(
-                label="📝 Ortalama Çek Vadesi", 
-                value=f"{ortalama_vade_cek:.1f} gün",
-                help="Fatura tarihi ile çek vade tarihi arasındaki ortalama"
-            )
+            fark = toplam_cek - toplam_fatura
+            st.metric("Fark", f"₺{fark:,.2f}", delta=f"{'Fazla' if fark > 0 else 'Eksik'}")
         
         st.divider()
         
-        # Detaylı açıklama
-        with st.expander("📊 Hesaplama Detayları", expanded=True):
-            st.markdown("""
-            **Hesaplama Yöntemi:**
-            
-            Ağırlıklı ortalama vade formülü:
-            ```
-            Ortalama Vade = Σ(Tutar × Vade) / Σ(Tutar)
-            ```
-            """)
-            
-            st.markdown("#### 📅 Hesaplama 1: Fatura → Valör Arası")
-            for idx, row in df.iterrows():
-                tutar = row['Tutar']
-                vade = row['Vade (Gün) - Valör']
-                agirlik = (tutar * vade)
-                st.markdown(f"- {row['Fatura No']}: ₺{tutar:,.2f} × {vade} gün = {agirlik:,.2f}")
-            
-            st.markdown(f"**Ortalama Valör Vadesi:** {ortalama_vade_valor:.1f} gün")
-            
-            st.divider()
-            
-            st.markdown("#### 📝 Hesaplama 2: Fatura → Çek Arası")
-            for idx, row in df.iterrows():
-                tutar = row['Tutar']
-                vade = row['Vade (Gün) - Çek']
-                agirlik = (tutar * vade)
-                st.markdown(f"- {row['Fatura No']}: ₺{tutar:,.2f} × {vade} gün = {agirlik:,.2f}")
-            
-            st.markdown(f"**Ortalama Çek Vadesi:** {ortalama_vade_cek:.1f} gün")
+        # Çek bazlı ortalama vadeler
+        st.subheader("📊 Çek Bazlı Vade Analizi")
+        
+        for cek_no in df_cekler['Çek No']:
+            with st.expander(f"💳 {cek_no}", expanded=True):
+                cek_data = df_hesap[df_hesap['Çek No'] == cek_no]
+                
+                # Bu çek için ağırlıklı ortalama
+                tutarlar = cek_data['Fatura Tutar'].tolist()
+                vadeler_valor = cek_data['Vade (Gün) - Valör'].tolist()
+                vadeler_cek = cek_data['Vade (Gün) - Çek'].tolist()
+                
+                ort_valor = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_valor)
+                ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_cek)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Ort. Valör Vadesi", f"{ort_valor:.1f} gün")
+                with col2:
+                    st.metric("Ort. Çek Vadesi", f"{ort_cek:.1f} gün")
+                
+                st.markdown("**İlgili Faturalar:**")
+                for _, row in cek_data.iterrows():
+                    st.text(f"• {row['Fatura No']}: ₺{row['Fatura Tutar']:,.0f} - Valör: {row['Vade (Gün) - Valör']} gün, Çek: {row['Vade (Gün) - Çek']} gün")
+    
+    elif st.session_state.faturalar and not st.session_state.cekler:
+        st.warning("⚠️ Lütfen en az bir çek ekleyin!")
+    
+    elif not st.session_state.faturalar and st.session_state.cekler:
+        st.warning("⚠️ Lütfen en az bir fatura ekleyin!")
+    
+    else:
+        st.info("📝 Fatura ve çek ekleyerek hesaplama yapın.")
             
             st.markdown(f"""
             **Toplam:** {toplam_tutar:,.2f} ₺
