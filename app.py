@@ -42,7 +42,7 @@ with col1:
     
     # Yeni fatura ekleme formu
     with st.form("fatura_form", clear_on_submit=True):
-        form_col1, form_col2, form_col3 = st.columns([2, 2, 1])
+        form_col1, form_col2, form_col3 = st.columns([2, 2, 2])
         
         with form_col1:
             fatura_no = st.text_input("Fatura No", placeholder="örn: FAT-2025-001")
@@ -56,26 +56,27 @@ with col1:
             )
         
         with form_col3:
-            fatura_vadesi = st.number_input(
-                "Vade (Gün)", 
-                min_value=0, 
-                max_value=365,
-                value=30,
-                step=1
+            fatura_tarihi_input = st.date_input(
+                "Fatura Tarihi", 
+                value=valor_tarihi + timedelta(days=30),
+                min_value=valor_tarihi,
+                help="Fatura vade tarihi"
             )
         
         submitted = st.form_submit_button("➕ Fatura Ekle", use_container_width=True)
         
         if submitted:
             if fatura_no and fatura_tutari > 0:
-                fatura_tarihi = valor_tarihi + timedelta(days=fatura_vadesi)
+                # Vade gününü hesapla (Fatura tarihi - Valör tarihi)
+                fatura_vadesi = (fatura_tarihi_input - valor_tarihi).days
+                
                 st.session_state.faturalar.append({
                     'Fatura No': fatura_no,
                     'Tutar': fatura_tutari,
                     'Vade (Gün)': fatura_vadesi,
-                    'Vade Tarihi': fatura_tarihi.strftime('%d.%m.%Y')
+                    'Vade Tarihi': fatura_tarihi_input.strftime('%d.%m.%Y')
                 })
-                st.success(f"✅ {fatura_no} eklendi!")
+                st.success(f"✅ {fatura_no} eklendi! ({fatura_vadesi} gün vade)")
                 st.rerun()
             else:
                 st.error("⚠️ Lütfen fatura numarası ve geçerli bir tutar girin!")
