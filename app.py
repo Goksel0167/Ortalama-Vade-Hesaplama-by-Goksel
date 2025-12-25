@@ -67,7 +67,15 @@ with col1:
         with form_col4:
             valor_tarihi_input = st.date_input(
                 "Valör Tarihi",
-                vaHesaplama 1: Fatura Tarihi - Valör Tarihi
+                value=datetime.now().date() + timedelta(days=30),
+                help="Faturanın valör tarihi"
+            )
+        
+        submitted = st.form_submit_button("➕ Fatura Ekle", use_container_width=True)
+        
+        if submitted:
+            if fatura_no and fatura_tutari > 0:
+                # Hesaplama 1: Fatura Tarihi - Valör Tarihi
                 vade_gun_valor = (valor_tarihi_input - fatura_tarihi_input).days
                 
                 # Hesaplama 2: Fatura Tarihi - Çek Vade Tarihi
@@ -81,15 +89,7 @@ with col1:
                     'Vade (Gün) - Valör': vade_gun_valor,
                     'Vade (Gün) - Çek': vade_gun_cek
                 })
-                st.success(f"✅ {fatura_no} eklendi! (Valör: {vade_gun_valor} gün, Çek: {vade_gun_cek} gün
-                
-                st.session_state.faturalar.append({
-                    'Fatura No': fatura_no,
-                    'Tutar': fatura_tutari,
-                    'Vade (Gün)': fatura_vadesi,
-                    'Vade Tarihi': fatura_tarihi_input.strftime('%d.%m.%Y')
-                })
-                st.success(f"✅ {fatura_no} eklendi! ({fatura_vadesi} gün vade)")
+                st.success(f"✅ {fatura_no} eklendi! (Valör: {vade_gun_valor} gün, Çek: {vade_gun_cek} gün)")
                 st.rerun()
             else:
                 st.error("⚠️ Lütfen fatura numarası ve geçerli bir tutar girin!")
