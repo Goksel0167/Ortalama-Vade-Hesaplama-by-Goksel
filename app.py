@@ -145,7 +145,13 @@ with col2:
                 label="📝 Ortalama Çek Vadesi", 
                 value=f"{ortalama_vade_cek:.1f} gün",
                 help="Fatura tarihi ile çek vade tarihi arasındaki ortalama"
-            )"""
+            )
+        
+        st.divider()
+        
+        # Detaylı açıklama
+        with st.expander("📊 Hesaplama Detayları", expanded=True):
+            st.markdown("""
             **Hesaplama Yöntemi:**
             
             Ağırlıklı ortalama vade formülü:
@@ -172,16 +178,7 @@ with col2:
                 agirlik = (tutar * vade)
                 st.markdown(f"- {row['Fatura No']}: ₺{tutar:,.2f} × {vade} gün = {agirlik:,.2f}")
             
-            st.markdown(f"**Ortalama Çek Vadesi:** {ortalama_vade_cek:.1f} gün
-            **Sizin Hesabınız:**
-            """)
-            
-            # Her fatura için hesaplama_v2(df_export, cek_vade_tarihi, ortalama_vade_valor, ortalama_vade_cek
-            for idx, row in df.iterrows():
-                tutar = row['Tutar']
-                vade = row['Vade (Gün)']
-                agirlik = (tutar * vade)
-                st.markdown(f"- {row['Fatura No']}: ₺{tutar:,.2f} × {vade} gün = {agirlik:,.2f}")
+            st.markdown(f"**Ortalama Çek Vadesi:** {ortalama_vade_cek:.1f} gün")
             
             st.markdown(f"""
             **Toplam:** {toplam_tutar:,.2f} ₺
