@@ -69,7 +69,7 @@ with st.sidebar:
     st.info("💡 Birden fazla çek ekleyerek faturaları çeklere dağıtabilirsiniz.")
 
 # Ana içerik
-col1, col2 = st.columns([2, 1])
+col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader("📝 Fatura Bilgileri")
@@ -182,20 +182,30 @@ with col2:
         
         df_hesap = pd.DataFrame(hesaplamalar)
         
-        # Özet metrikler
-        st.metric("Toplam Fatura", f"₺{toplam_fatura:,.2f}")
+        # Özet metrikler - Daha büyük ve okunabilir
+        st.markdown("### 📊 Genel Durum")
         
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.metric("Toplam Çek", f"₺{toplam_cek:,.2f}")
-        with col_b:
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        with metric_col1:
+            st.markdown(f"<h3 style='text-align: center;'>Toplam Fatura</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #1f77b4;'>₺{toplam_fatura:,.0f}</h2>", unsafe_allow_html=True)
+        
+        with metric_col2:
+            st.markdown(f"<h3 style='text-align: center;'>Toplam Çek</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #2ca02c;'>₺{toplam_cek:,.0f}</h2>", unsafe_allow_html=True)
+        
+        with metric_col3:
             fark = toplam_cek - toplam_fatura
-            st.metric("Fark", f"₺{fark:,.2f}", delta=f"{'Fazla' if fark > 0 else 'Eksik'}")
+            renk = '#2ca02c' if fark >= 0 else '#d62728'
+            durum = 'Fazla ✅' if fark >= 0 else 'Eksik ⚠️'
+            st.markdown(f"<h3 style='text-align: center;'>Fark</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: {renk};'>₺{abs(fark):,.0f}</h2>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; font-size: 18px;'>{durum}</p>", unsafe_allow_html=True)
         
         st.divider()
         
         # Çek bazlı ortalama vadeler
-        st.subheader("📊 Çek Bazlı Vade Analizi")
+        st.markdown("### 💳 Çek Bazlı Vade Analizi")
         
         for cek_no in df_cekler['Çek No']:
             with st.expander(f"💳 {cek_no}", expanded=True):
@@ -209,15 +219,19 @@ with col2:
                 ort_valor = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_valor)
                 ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_cek)
                 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Ort. Valör Vadesi", f"{ort_valor:.1f} gün")
-                with col2:
-                    st.metric("Ort. Çek Vadesi", f"{ort_cek:.1f} gün")
+                # Büyük metrikler
+                vade_col1, vade_col2 = st.columns(2)
+                with vade_col1:
+                    st.markdown(f"<h4 style='text-align: center;'>📅 Ort. Valör Vadesi</h4>", unsafe_allow_html=True)
+                    st.markdown(f"<h1 style='text-align: center; color: #ff7f0e;'>{ort_valor:.1f} gün</h1>", unsafe_allow_html=True)
+                with vade_col2:
+                    st.markdown(f"<h4 style='text-align: center;'>📝 Ort. Çek Vadesi</h4>", unsafe_allow_html=True)
+                    st.markdown(f"<h1 style='text-align: center; color: #9467bd;'>{ort_cek:.1f} gün</h1>", unsafe_allow_html=True)
                 
-                st.markdown("**İlgili Faturalar:**")
+                st.markdown("---")
+                st.markdown("**📋 İlgili Faturalar:**")
                 for _, row in cek_data.iterrows():
-                    st.text(f"• {row['Fatura No']}: ₺{row['Fatura Tutar']:,.0f} - Valör: {row['Vade (Gün) - Valör']} gün, Çek: {row['Vade (Gün) - Çek']} gün")
+                    st.markdown(f"• **{row['Fatura No']}**: ₺{row['Fatura Tutar']:,.0f} → Valör: **{row['Vade (Gün) - Valör']} gün**, Çek: **{row['Vade (Gün) - Çek']} gün**")
     
     elif st.session_state.faturalar and not st.session_state.cekler:
         st.warning("⚠️ Lütfen en az bir çek ekleyin!")
