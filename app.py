@@ -51,7 +51,13 @@ with st.sidebar:
     if st.session_state.cekler:
         st.markdown("#### 📋 Eklenen Çekler")
         for idx, cek in enumerate(st.session_state.cekler):
-            st.text(f"{cek['Çek No']}: ₺{cek['Tutar']:,.0f} - {cek['Vade Tarihi']}")
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.text(f"{cek['Çek No']}: ₺{cek['Tutar']:,.0f} - {cek['Vade Tarihi']}")
+            with col2:
+                if st.button("🗑️", key=f"del_cek_{idx}", help="Sil"):
+                    st.session_state.cekler.pop(idx)
+                    st.rerun()
         
         if st.button("🗑️ Tüm Çekleri Temizle", type="secondary", use_container_width=True):
             st.session_state.cekler = []
@@ -123,13 +129,15 @@ with col1:
     # Fatura listesi
     if st.session_state.faturalar:
         st.markdown("#### 📋 Eklenen Faturalar")
-        df = pd.DataFrame(st.session_state.faturalar)
         
-        # Tutarı formatla
-        df_display = df.copy()
-        df_display['Tutar'] = df_display['Tutar'].apply(lambda x: f"₺{x:,.2f}")
-        
-        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        for idx, fatura in enumerate(st.session_state.faturalar):
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                st.text(f"{fatura['Fatura No']}: ₺{fatura['Tutar']:,.2f} | Fatura: {fatura['Fatura Tarihi']} → Valör: {fatura['Valör Tarihi']}")
+            with col2:
+                if st.button("🗑️", key=f"del_fatura_{idx}", help="Sil"):
+                    st.session_state.faturalar.pop(idx)
+                    st.rerun()
         
         # Temizleme butonu
         if st.button("🗑️ Tüm Faturaları Temizle", type="secondary"):
