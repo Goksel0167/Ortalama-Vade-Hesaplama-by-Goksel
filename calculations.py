@@ -168,7 +168,3 @@ def min_max_vade_hesapla(tutarlar, vadeler):
     max_tutar = tutarlar[max_idx]
     
     return (min_vade, max_vade, min_tutar, max_tutar)
-
-![Python](https://img.shields.io/badge/Python-3.8+-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.31.0-red)
-![License](https://img.shields.io/badge/License-MIT-green)
