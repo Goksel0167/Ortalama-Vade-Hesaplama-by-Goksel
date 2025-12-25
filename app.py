@@ -219,31 +219,6 @@ with col2:
     
     else:
         st.info("📝 Fatura ve çek ekleyerek hesaplama yapın.")
-            
-            st.markdown(f"""
-            **Toplam:** {toplam_tutar:,.2f} ₺
-            
-            **Ortalama Vade:** {ortalama_vade:.1f} gün
-            
-            **Sonuç:** Müşterinizden **{cek_vadesi.strftime('%d.%m.%Y')}** vadeli çek almalısınız.
-            """)
-        
-        # Excel'e aktar
-        st.divider()
-        if st.button("📥 Excel'e Aktar", use_container_width=True):
-            # Excel oluşturma işlemi için
-            df_export = df.copy()
-            output = calculations.excel_export(df_export, valor_tarihi, ortalama_vade, cek_vadesi)
-            
-            st.download_button(
-                label="💾 İndir",
-                data=output,
-                file_name=f"ortalama_vade_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-    else:
-        st.info("📝 Hesaplama için en az bir fatura ekleyin.")
 
 # Footer
 st.divider()
