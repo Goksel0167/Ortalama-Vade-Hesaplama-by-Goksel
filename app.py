@@ -114,7 +114,12 @@ with col1:
 
 with col2:
     st.subheader("💰 Hesaplama Sonuçları")
-    _valor = df['Vade (Gün) - Valör'].tolist()
+    
+    if st.session_state.faturalar:
+        # Hesaplamaları yap
+        df = pd.DataFrame(st.session_state.faturalar)
+        tutarlar = df['Tutar'].tolist()
+        vadeler_valor = df['Vade (Gün) - Valör'].tolist()
         vadeler_cek = df['Vade (Gün) - Çek'].tolist()
         
         toplam_tutar = calculations.toplam_tutar_hesapla(tutarlar)
@@ -134,6 +139,12 @@ with col2:
                 label="📅 Ortalama Valör Vadesi", 
                 value=f"{ortalama_vade_valor:.1f} gün",
                 help="Fatura tarihi ile valör tarihi arasındaki ortalama"
+            )
+        with col_b:
+            st.metric(
+                label="📝 Ortalama Çek Vadesi", 
+                value=f"{ortalama_vade_cek:.1f} gün",
+                help="Fatura tarihi ile çek vade tarihi arasındaki ortalama"
             )"""
             **Hesaplama Yöntemi:**
             
