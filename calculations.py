@@ -41,6 +41,78 @@ def agirlikli_ortalama_vade_hesapla(tutarlar, vadeler):
     return toplam_agirlikli / toplam_tutar
 
 
+def excel_export_v2(df, cek_vade_tarihi, ortalama_vade_valor, ortalama_vade_cek):
+    """
+    Fatura bilgilerini ve çift hesaplama sonuçlarını Excel dosyasına aktarır
+    
+    Args:
+        df (DataFrame): Fatura bilgileri
+        cek_vade_tarihi (date): Çek vade tarihi
+        ortalama_vade_valor (float): Fatura-Valör arası ortalama vade
+        ortalama_vade_cek (float): Fatura-Çek arası ortalama vade
+    
+    Returns:
+        BytesIO: Excel dosyası buffer
+    """
+    output = BytesIO()
+    
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Fatura listesi sayfası
+        df_export = df.copy()
+        df_export.to_excel(writer, sheet_name='Faturalar', index=False)
+        
+        # Özet bilgiler sayfası
+        ozet_data = {
+            'Açıklama': [
+                'Çek Vade Tarihi',
+                'Toplam Fatura Tutarı',
+                'Toplam Fatura Sayısı',
+                'Ortalama Valör Vadesi (Gün)',
+                'Ortalama Çek Vadesi (Gün)'
+            ],
+            'Değer': [
+                cek_vade_tarihi.strftime('%d.%m.%Y'),
+                f"₺{df['Tutar'].sum():,.2f}",
+                len(df),
+                f"{ortalama_vade_valor:.1f} gün",
+                f"{ortalama_vade_cek:.1f} gün"
+            ]
+        }
+        ozet_df = pd.DataFrame(ozet_data)
+        ozet_df.to_excel(writer, sheet_name='Özet', index=False)
+        
+        # Hesaplama detayları sayfası - Valör
+        detay_valor = []
+        for idx, row in df.iterrows():
+            detay_valor.append({
+                'Fatura No': row['Fatura No'],
+                'Tutar': row['Tutar'],
+                'Vade (Gün)': row['Vade (Gün) - Valör'],
+                'Ağırlık (Tutar × Vade)': row['Tutar'] * row['Vade (Gün) - Valör'],
+                'Oran (%)': (row['Tutar'] / df['Tutar'].sum()) * 100
+            })
+        
+        detay_valor_df = pd.DataFrame(detay_valor)
+        detay_valor_df.to_excel(writer, sheet_name='Hesaplama - Valör', index=False)
+        
+        # Hesaplama detayları sayfası - Çek
+        detay_cek = []
+        for idx, row in df.iterrows():
+            detay_cek.append({
+                'Fatura No': row['Fatura No'],
+                'Tutar': row['Tutar'],
+                'Vade (Gün)': row['Vade (Gün) - Çek'],
+                'Ağırlık (Tutar × Vade)': row['Tutar'] * row['Vade (Gün) - Çek'],
+                'Oran (%)': (row['Tutar'] / df['Tutar'].sum()) * 100
+            })
+        
+        detay_cek_df = pd.DataFrame(detay_cek)
+        detay_cek_df.to_excel(writer, sheet_name='Hesaplama - Çek', index=False)
+    
+    output.seek(0)
+    return output
+
+
 def excel_export(df, valor_tarihi, ortalama_vade, cek_vadesi):
     """
     Fatura bilgilerini ve hesaplama sonuçlarını Excel dosyasına aktarır
