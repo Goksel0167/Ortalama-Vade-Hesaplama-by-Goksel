@@ -103,26 +103,36 @@ with col1:
             )
         
         with form_col4:
-            valor_tarihi_input = st.date_input(
-                "Valör Tarihi (90 gün)",
-                value=datetime.now().date() + timedelta(days=90),
-                min_value=datetime.now().date(),
-                help="Faturanın valör tarihi (Varsayılan: Bugünden 90 gün sonra)"
+            vade_gun = st.number_input(
+                "Vade (Gün)",
+                min_value=0,
+                max_value=365,
+                value=90,
+                step=1,
+                help="Fatura vadesi (gün). Valör tarihi otomatik hesaplanacak."
             )
+            
+            # Valör tarihini hesapla ve göster
+            hesaplanan_valor = fatura_tarihi_input + timedelta(days=vade_gun)
+            st.info(f"📅 Valör Tarihi: **{hesaplanan_valor.strftime('%d.%m.%Y')}** ({vade_gun} gün sonra)")
         
         submitted = st.form_submit_button("➕ Fatura Ekle", use_container_width=True)
         
         if submitted:
             if fatura_no and fatura_tutari > 0:
+                # Valör tarihini hesapla
+                valor_tarihi_hesaplanan = fatura_tarihi_input + timedelta(days=vade_gun)
+                
                 st.session_state.faturalar.append({
                     'Fatura No': fatura_no,
                     'Tutar': fatura_tutari,
                     'Fatura Tarihi': fatura_tarihi_input.strftime('%d.%m.%Y'),
-                    'Valör Tarihi': valor_tarihi_input.strftime('%d.%m.%Y'),
+                    'Vade (Gün)': vade_gun,
+                    'Valör Tarihi': valor_tarihi_hesaplanan.strftime('%d.%m.%Y'),
                     'Fatura Tarihi Raw': fatura_tarihi_input,
-                    'Valör Tarihi Raw': valor_tarihi_input
+                    'Valör Tarihi Raw': valor_tarihi_hesaplanan
                 })
-                st.success(f"✅ {fatura_no} eklendi!")
+                st.success(f"✅ {fatura_no} eklendi! Valör: {valor_tarihi_hesaplanan.strftime('%d.%m.%Y')} ({vade_gun} gün)")
                 st.rerun()
             else:
                 st.error("⚠️ Lütfen fatura numarası ve geçerli bir tutar girin!")
@@ -134,7 +144,7 @@ with col1:
         for idx, fatura in enumerate(st.session_state.faturalar):
             col1, col2 = st.columns([5, 1])
             with col1:
-                st.text(f"{fatura['Fatura No']}: ₺{fatura['Tutar']:,.2f} | Fatura: {fatura['Fatura Tarihi']} → Valör: {fatura['Valör Tarihi']}")
+                st.text(f"{fatura['Fatura No']}: ₺{fatura['Tutar']:,.2f} | {fatura['Vade (Gün)']} gün | Fatura: {fatura['Fatura Tarihi']} → Valör: {fatura['Valör Tarihi']}")
             with col2:
                 if st.button("🗑️", key=f"del_fatura_{idx}", help="Sil"):
                     st.session_state.faturalar.pop(idx)
