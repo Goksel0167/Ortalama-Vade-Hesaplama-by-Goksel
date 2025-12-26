@@ -104,9 +104,10 @@ with col1:
         
         with form_col4:
             valor_tarihi_input = st.date_input(
-                "Valör Tarihi",
-                value=datetime.now().date() + timedelta(days=30),
-                help="Faturanın valör tarihi"
+                "Valör Tarihi (90 gün)",
+                value=datetime.now().date() + timedelta(days=90),
+                min_value=datetime.now().date(),
+                help="Faturanın valör tarihi (Varsayılan: Bugünden 90 gün sonra)"
             )
         
         submitted = st.form_submit_button("➕ Fatura Ekle", use_container_width=True)
