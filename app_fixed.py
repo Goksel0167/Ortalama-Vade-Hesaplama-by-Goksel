@@ -11,6 +11,7 @@ def to_excel_bytes(df_dict):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for sheet_name, df in df_dict.items():
             df.to_excel(writer, sheet_name=sheet_name, index=False)
+        writer.save()
     return output.getvalue()
 
 # Ana uygulama başlığı
@@ -77,27 +78,21 @@ with col1:
             valor_str = "-"
         st.info(f"📅 Valör Tarihi: **{valor_str}** ({vade_gun} gün sonra)")
 
-    # Ekle butonu
-    if st.button("➕ Fatura Ekle", type="primary", use_container_width=True, key="add_fatura_btn"):
-        if fatura_no and fatura_tutari and fatura_tutari > 0:
-            if not any(f['Fatura No'] == fatura_no for f in st.session_state.faturalar):
-                fatura_tarihi_str = fatura_tarihi.strftime('%d.%m.%Y') if fatura_tarihi is not None and hasattr(fatura_tarihi, 'strftime') else "-"
-                valor_str = hesaplanan_valor.strftime('%d.%m.%Y') if hesaplanan_valor is not None and hasattr(hesaplanan_valor, 'strftime') else "-"
-                st.session_state.faturalar.append({
-                    'Fatura No': fatura_no,
-                    'Tutar': fatura_tutari,
-                    'Fatura Tarihi': fatura_tarihi_str,
-                    'Vade (Gün)': vade_gun,
-                    'Valör Tarihi': valor_str,
-                    'Fatura Tarihi Raw': fatura_tarihi,
-                    'Valör Tarihi Raw': hesaplanan_valor
-                })
-                st.success(f"✅ {fatura_no} eklendi!")
-                st.rerun()
-            else:
-                st.error(f"❌ {fatura_no} zaten ekli!")
-        else:
-            st.error("❌ Lütfen tüm alanları doldurun!")
+    # Otomatik ekleme: tüm alanlar doluysa ve fatura_no yeni ise ekle
+    if fatura_no and fatura_tutari and fatura_tutari > 0 and not any(f['Fatura No'] == fatura_no for f in st.session_state.faturalar):
+        fatura_tarihi_str = fatura_tarihi.strftime('%d.%m.%Y') if fatura_tarihi is not None and hasattr(fatura_tarihi, 'strftime') else "-"
+        valor_str = hesaplanan_valor.strftime('%d.%m.%Y') if hesaplanan_valor is not None and hasattr(hesaplanan_valor, 'strftime') else "-"
+        st.session_state.faturalar.append({
+            'Fatura No': fatura_no,
+            'Tutar': fatura_tutari,
+            'Fatura Tarihi': fatura_tarihi_str,
+            'Vade (Gün)': vade_gun,
+            'Valör Tarihi': valor_str,
+            'Fatura Tarihi Raw': fatura_tarihi,
+            'Valör Tarihi Raw': hesaplanan_valor
+        })
+        st.success(f"✅ {fatura_no} eklendi! Valör: {valor_str} ({vade_gun} gün)")
+        st.rerun()
 
     # Fatura listesi
     if st.session_state.faturalar:
@@ -155,23 +150,17 @@ with col2:
         cek_vade_gun = (cek_vade_tarihi - datetime.now().date()).days
         st.info(f"📅 Vade: **{cek_vade_gun} gün** sonra")
 
-    # Ekle butonu
-    if st.button("➕ Çek Ekle", type="primary", use_container_width=True, key="add_cek_btn"):
-        if cek_no and cek_tutari and cek_tutari > 0:
-            if not any(c['Çek No'] == cek_no for c in st.session_state.cekler):
-                cek_vade_tarihi_str = cek_vade_tarihi.strftime('%d.%m.%Y') if hasattr(cek_vade_tarihi, 'strftime') else "-"
-                st.session_state.cekler.append({
-                    'Çek No': cek_no,
-                    'Tutar': cek_tutari,
-                    'Vade Tarihi': cek_vade_tarihi_str,
-                    'Vade Tarihi Raw': cek_vade_tarihi
-                })
-                st.success(f"✅ {cek_no} eklendi!")
-                st.rerun()
-            else:
-                st.error(f"❌ {cek_no} zaten ekli!")
-        else:
-            st.error("❌ Lütfen tüm alanları doldurun!")
+    # Otomatik ekleme
+    if cek_no and cek_tutari and cek_tutari > 0 and not any(c['Çek No'] == cek_no for c in st.session_state.cekler):
+        cek_vade_tarihi_str = cek_vade_tarihi.strftime('%d.%m.%Y') if hasattr(cek_vade_tarihi, 'strftime') else "-"
+        st.session_state.cekler.append({
+            'Çek No': cek_no,
+            'Tutar': cek_tutari,
+            'Vade Tarihi': cek_vade_tarihi_str,
+            'Vade Tarihi Raw': cek_vade_tarihi
+        })
+        st.success(f"✅ {cek_no} eklendi! Vade: {cek_vade_tarihi_str}")
+        st.rerun()
 
     # Çek listesi
     if st.session_state.cekler:
@@ -196,32 +185,9 @@ st.divider()
 st.info("💡 Birden fazla çek ekleyerek faturaları çeklere dağıtabilirsiniz.")
 st.divider()
 
-# GENİŞ EKRAN İÇİN CSS
-st.markdown("""
-<style>
-    /* Ana container'ı genişlet ama üst bölüm için değil */
-    .main .block-container {
-        max-width: 95% !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
-    
-    /* Üst kısımdaki columns (Fatura ve Çek Bilgileri) korunuyor */
-    [data-testid="column"] {
-        width: auto !important;
-        flex: 1 1 auto !important;
-    }
-    
-    /* Hesaplama sonuçları bölümü için tam genişlik */
-    div.stMarkdown > div[data-testid="stMarkdownContainer"] > h2 {
-        margin-top: 2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # HESAPLAMA SONUÇLARI - TAM GENİŞLİKTE
 if st.session_state.faturalar and st.session_state.cekler:
-    st.markdown("## 💰 Hesaplama Sonuçları")
+    st.subheader("💰 Hesaplama Sonuçları")
     
     df_faturalar = pd.DataFrame(st.session_state.faturalar)
     df_cekler = pd.DataFrame(st.session_state.cekler)
@@ -256,37 +222,16 @@ if st.session_state.faturalar and st.session_state.cekler:
 
     # Genel ortalama vadeler hesapla
     tum_fatura_tutarlar = df_faturalar['Tutar'].tolist()
-    tum_valor_vadeler = []
-    for _, row in df_faturalar.iterrows():
-        fatura_raw = row['Fatura Tarihi Raw']
-        valor_raw = row['Valör Tarihi Raw']
-        if fatura_raw and valor_raw:
-            vade_gun = (valor_raw - fatura_raw).days
-            tum_valor_vadeler.append(vade_gun)
-        else:
-            tum_valor_vadeler.append(0)
+    tum_valor_vadeler = [(row['Valör Tarihi Raw'] - row['Fatura Tarihi Raw']).days for _, row in df_faturalar.iterrows()]
     
     genel_ort_valor = calculations.agirlikli_ortalama_vade_hesapla(tum_fatura_tutarlar, tum_valor_vadeler)
     
     # Tüm çek vadeleri için ağırlıklı ortalama
     tum_cek_tutarlar = []
     tum_cek_vade_gunler = []
-    
-    # En erken fatura tarihini bul
-    ilk_fatura_tarihi = None
-    for _, row in df_faturalar.iterrows():
-        if row['Fatura Tarihi Raw']:
-            if ilk_fatura_tarihi is None or row['Fatura Tarihi Raw'] < ilk_fatura_tarihi:
-                ilk_fatura_tarihi = row['Fatura Tarihi Raw']
-    
     for _, cek in df_cekler.iterrows():
         tum_cek_tutarlar.append(cek['Tutar'])
-        if cek['Vade Tarihi Raw'] and ilk_fatura_tarihi:
-            vade_gun = (cek['Vade Tarihi Raw'] - ilk_fatura_tarihi).days
-            tum_cek_vade_gunler.append(vade_gun)
-        else:
-            tum_cek_vade_gunler.append(0)
-    
+        tum_cek_vade_gunler.append((cek['Vade Tarihi Raw'] - df_faturalar['Fatura Tarihi Raw'].min()).days)
     genel_ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_vade_gunler)
 
     # Excel indirme butonu
@@ -302,53 +247,47 @@ if st.session_state.faturalar and st.session_state.cekler:
     st.markdown(f"""
     <style>
     .wide-metrics-bar {{
-        position: relative;
-        width: 95vw !important;
-        max-width: 95vw !important;
-        margin: 32px calc(-47.5vw + 50%) !important;
-        padding: 50px 40px;
+        width: 100%;
+        margin: 32px 0;
+        padding: 40px 24px;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 24px;
-        box-shadow: 0 6px 30px rgba(0,0,0,0.1);
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         display: flex;
-        flex-wrap: nowrap;
-        justify-content: space-evenly;
+        flex-wrap: wrap;
+        justify-content: space-around;
         align-items: center;
-        gap: 48px;
+        gap: 32px;
     }}
     .metric-block {{
         flex: 1;
-        min-width: 220px;
+        min-width: 200px;
         text-align: center;
-        padding: 24px;
+        padding: 20px;
     }}
     .metric-value {{
-        font-size: 3.5rem;
+        font-size: 2.8rem;
         font-weight: bold;
-        margin-bottom: 16px;
-        text-shadow: 0 3px 6px rgba(0,0,0,0.12);
-        line-height: 1.2;
+        margin-bottom: 12px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }}
     .metric-label {{
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         color: #495057;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }}
-    .metric-sublabel {{
-        font-size: 1.25rem;
-        color: #6c757d;
-        margin-top: 10px;
         font-weight: 500;
     }}
-    @media (max-width: 1400px) {{
+    .metric-sublabel {{
+        font-size: 1.1rem;
+        color: #6c757d;
+        margin-top: 8px;
+    }}
+    @media (max-width: 1200px) {{
         .wide-metrics-bar {{
-            flex-wrap: wrap;
-            width: 100%;
-            margin-left: 0;
+            flex-direction: column;
         }}
         .metric-block {{
-            min-width: 180px;
+            width: 100%;
+            min-width: auto;
         }}
     }}
     </style>
