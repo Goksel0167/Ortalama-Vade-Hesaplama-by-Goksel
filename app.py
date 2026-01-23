@@ -527,15 +527,17 @@ if st.session_state.faturalar and st.session_state.cekler:
     }
     excel_bytes = to_excel_bytes(excel_data)
     
-    col_excel1, col_excel2 = st.columns([3, 1])
-    with col_excel1:
-        st.download_button(
-            label="📥 Tüm Detayları Excel'e İndir (Formatlanmış)",
-            data=excel_bytes,
-            file_name=f"ortalama_vade_hesaplama_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
+    st.markdown("---")
+    st.markdown("### 📥 Hesaplama Sonuçlarını İndir")
+    st.download_button(
+        label="📥 Tüm Detayları Excel'e İndir (Formatlanmış)",
+        data=excel_bytes,
+        file_name=f"ortalama_vade_hesaplama_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+        type="primary"
+    )
+    st.caption("💡 Excel dosyası 5 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler ve Vade Dağılımı")
 
     # GENİŞ METRİK BARI
     st.markdown(f"""
