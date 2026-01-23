@@ -67,6 +67,27 @@ def to_excel_bytes(df_dict):
 # Ana uygulama başlığı
 st.set_page_config(page_title="Ortalama Vade Hesaplama", page_icon="📊", layout="wide")
 
+# Session state başlatma - EN BAŞTA OLMALI
+if 'faturalar' not in st.session_state:
+    st.session_state.faturalar = []
+if 'cekler' not in st.session_state:
+    st.session_state.cekler = []
+if 'musteri_gecmisi' not in st.session_state:
+    st.session_state.musteri_gecmisi = []  # Son 5 müşteri kaydı
+if 'hesaplama_gecmisi' not in st.session_state:
+    st.session_state.hesaplama_gecmisi = []  # Son 5 hesaplama kaydı
+if 'show_filters' not in st.session_state:
+    st.session_state.show_filters = False
+if 'filter_min_tutar' not in st.session_state:
+    st.session_state.filter_min_tutar = 0.0
+if 'filter_max_tutar' not in st.session_state:
+    st.session_state.filter_max_tutar = 1000000.0
+if 'filter_min_vade' not in st.session_state:
+    st.session_state.filter_min_vade = 0
+if 'filter_max_vade' not in st.session_state:
+    st.session_state.filter_max_vade = 365
+
+# Başlık ve geçmiş butonu
 title_col1, title_col2 = st.columns([4, 1])
 with title_col1:
     st.title("📊 Ortalama Vade Hesaplama Programı")
@@ -97,26 +118,6 @@ if st.session_state.get('show_history', False) and st.session_state.hesaplama_ge
             st.session_state.show_history = False
             st.rerun()
     st.divider()
-
-# Session state başlatma
-if 'faturalar' not in st.session_state:
-    st.session_state.faturalar = []
-if 'cekler' not in st.session_state:
-    st.session_state.cekler = []
-if 'musteri_gecmisi' not in st.session_state:
-    st.session_state.musteri_gecmisi = []  # Son 5 müşteri kaydı
-if 'hesaplama_gecmisi' not in st.session_state:
-    st.session_state.hesaplama_gecmisi = []  # Son 5 hesaplama kaydı
-if 'show_filters' not in st.session_state:
-    st.session_state.show_filters = False
-if 'filter_min_tutar' not in st.session_state:
-    st.session_state.filter_min_tutar = 0.0
-if 'filter_max_tutar' not in st.session_state:
-    st.session_state.filter_max_tutar = 1000000.0
-if 'filter_min_vade' not in st.session_state:
-    st.session_state.filter_min_vade = 0
-if 'filter_max_vade' not in st.session_state:
-    st.session_state.filter_max_vade = 365
 
 # Ana içerik - 2 sütun
 col1, col2 = st.columns([1, 1])
