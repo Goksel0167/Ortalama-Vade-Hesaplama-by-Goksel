@@ -66,7 +66,37 @@ def to_excel_bytes(df_dict):
 
 # Ana uygulama başlığı
 st.set_page_config(page_title="Ortalama Vade Hesaplama", page_icon="📊", layout="wide")
-st.title("📊 Ortalama Vade Hesaplama Programı")
+
+title_col1, title_col2 = st.columns([4, 1])
+with title_col1:
+    st.title("📊 Ortalama Vade Hesaplama Programı")
+with title_col2:
+    if st.session_state.hesaplama_gecmisi:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("📚 Geçmiş Hesaplamalar", use_container_width=True, type="secondary"):
+            st.session_state.show_history = not st.session_state.get('show_history', False)
+            st.rerun()
+
+# Geçmiş hesaplamaları göster
+if st.session_state.get('show_history', False) and st.session_state.hesaplama_gecmisi:
+    with st.expander("📚 Son 5 Hesaplama", expanded=True):
+        for idx, gecmis in enumerate(st.session_state.hesaplama_gecmisi):
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.write(f"**{idx+1}.** {gecmis['tarih']}")
+            with col2:
+                st.write(f"Fatura: {gecmis['fatura_adet']} adet, Çek: {gecmis['cek_adet']} adet")
+            with col3:
+                if st.button("📂 Yükle", key=f"load_history_{idx}", use_container_width=True):
+                    st.session_state.faturalar = gecmis['faturalar']
+                    st.session_state.cekler = gecmis['cekler']
+                    st.success(f"✅ {gecmis['tarih']} tarihli hesaplama yüklendi!")
+                    st.session_state.show_history = False
+                    st.rerun()
+        if st.button("❌ Kapat", use_container_width=True):
+            st.session_state.show_history = False
+            st.rerun()
+    st.divider()
 
 # Session state başlatma
 if 'faturalar' not in st.session_state:
@@ -75,6 +105,8 @@ if 'cekler' not in st.session_state:
     st.session_state.cekler = []
 if 'musteri_gecmisi' not in st.session_state:
     st.session_state.musteri_gecmisi = []  # Son 5 müşteri kaydı
+if 'hesaplama_gecmisi' not in st.session_state:
+    st.session_state.hesaplama_gecmisi = []  # Son 5 hesaplama kaydı
 if 'show_filters' not in st.session_state:
     st.session_state.show_filters = False
 if 'filter_min_tutar' not in st.session_state:
@@ -379,6 +411,31 @@ st.markdown("""
 
 # HESAPLAMA SONUÇLARI - TAM GENİŞLİKTE
 if st.session_state.faturalar and st.session_state.cekler:
+    # Hesaplamayı geçmişe kaydet
+    gecmis_kayit = {
+        'tarih': datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+        'faturalar': st.session_state.faturalar.copy(),
+        'cekler': st.session_state.cekler.copy(),
+        'fatura_adet': len(st.session_state.faturalar),
+        'cek_adet': len(st.session_state.cekler)
+    }
+    
+    # Aynı veri varsa tekrar ekleme
+    aynisi_var = False
+    for gecmis in st.session_state.hesaplama_gecmisi:
+        if (gecmis['fatura_adet'] == gecmis_kayit['fatura_adet'] and 
+            gecmis['cek_adet'] == gecmis_kayit['cek_adet']):
+            # Daha detaylı kontrol
+            if len(gecmis['faturalar']) > 0 and len(gecmis_kayit['faturalar']) > 0:
+                if gecmis['faturalar'][0] == gecmis_kayit['faturalar'][0]:
+                    aynisi_var = True
+                    break
+    
+    if not aynisi_var:
+        st.session_state.hesaplama_gecmisi.insert(0, gecmis_kayit)
+        if len(st.session_state.hesaplama_gecmisi) > 5:
+            st.session_state.hesaplama_gecmisi = st.session_state.hesaplama_gecmisi[:5]
+    
     st.markdown("## 💰 Hesaplama Sonuçları")
     
     # FİLTRELEME BÖLÜMÜ
