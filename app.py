@@ -8,13 +8,317 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# --- EXCEL İNDİRME FONKSİYONU (GELİŞMİŞ) ---
-def to_excel_bytes(df_dict):
+# --- LANGUAGE DICTIONARY ---
+LANGUAGES = {
+    'TR': {
+        'page_title': 'Ortalama Vade Hesaplama',
+        'app_title': '📊 Ortalama Vade Hesaplama Programı',
+        'history_btn': '📚 Geçmiş Hesaplamalar',
+        'last_calculations': '📚 Son 5 Hesaplama',
+        'invoice': 'Fatura',
+        'check': 'Çek',
+        'items': 'adet',
+        'load': '📂 Yükle',
+        'close': '❌ Kapat',
+        'loaded_success': 'tarihli hesaplama yüklendi!',
+        'invoice_info': '📝 Fatura Bilgileri',
+        'invoice_no': 'Fatura No',
+        'invoice_no_placeholder': 'örn: FAT-2025-001',
+        'invoice_amount': 'Fatura Tutarı (₺)',
+        'amount_placeholder': 'örn: 10000',
+        'invoice_date': 'Fatura Tarihi',
+        'maturity_days': 'Vade (Gün)',
+        'value_date': 'Valör Tarihi',
+        'days_later': 'gün sonra',
+        'add_invoice': '➕ Fatura Ekle',
+        'added': 'eklendi!',
+        'already_exists': 'zaten ekli!',
+        'fill_all_fields': 'Lütfen tüm alanları doldurun!',
+        'added_invoices': '📋 Eklenen Faturalar',
+        'days': 'gün',
+        'delete': 'Sil',
+        'clear_all_invoices': '🗑️ Tüm Faturaları Temizle',
+        'use_form_above': '👆 Yukarıdaki formu kullanarak fatura ekleyin.',
+        'check_info': '💳 Çek Bilgileri',
+        'customer_name': '👤 Müşteri Adı',
+        'customer_placeholder': 'örn: ABC Ltd. Şti.',
+        'recent_customers': 'Son kullanılan müşteriler:',
+        'check_no': 'Çek No',
+        'check_no_placeholder': 'örn: ÇEK-001',
+        'check_amount': 'Çek Tutarı (₺)',
+        'check_maturity_date': 'Çek Vade Tarihi',
+        'maturity': 'Vade',
+        'from_invoice_date': 'Fatura tarihinden',
+        'onwards': 'itibaren',
+        'add_invoice_first': '⚠️ Önce fatura ekleyin',
+        'add_check': '➕ Çek Ekle',
+        'customer': 'Müşteri',
+        'fill_all_fields_customer': 'Lütfen tüm alanları doldurun (Müşteri adı dahil)!',
+        'added_checks': '📋 Eklenen Çekler',
+        'unknown': 'Bilinmiyor',
+        'clear_all_checks': '🗑️ Tüm Çekleri Temizle',
+        'add_checks_info': '💡 Müşteriden alacağınız çekleri ekleyin',
+        'check_maturity_info': '💡 Çek vade tarihi otomatik olarak fatura tarihinden 90 gün sonraya ayarlanır. 🟢 90 günden az = İyi, 🔴 90 günden fazla = Dikkat!',
+        'calculation_results': '💰 Hesaplama Sonuçları',
+        'filter': '🔍 Filtreleme',
+        'filter_options': '🔍 Veri Filtreleme Seçenekleri',
+        'amount_range': 'Tutar Aralığı (₺)',
+        'min_amount': 'Min Tutar',
+        'max_amount': 'Max Tutar',
+        'maturity_range': 'Vade Aralığı (Gün)',
+        'min_maturity': 'Min Vade',
+        'max_maturity': 'Max Vade',
+        'apply_filter': '✅ Filtreyi Uygula',
+        'filter_applied': '✅ Filtre uygulandı!',
+        'no_data_filter': '⚠️ Filtre kriterleriyle eşleşen veri bulunamadı!',
+        'total_invoice': 'Toplam Fatura',
+        'total_check': 'Toplam Çek',
+        'difference': 'Fark',
+        'surplus': 'Fazla ✅',
+        'deficit': 'Eksik ⚠️',
+        'avg_value_maturity': 'Ort. Valör Vadesi',
+        'avg_check_maturity': 'Ort. Çek Vadesi',
+        'download_results': '📥 Hesaplama Sonuçlarını İndir',
+        'download_excel': '📥 Tüm Detayları Excel\'e İndir (Formatlanmış)',
+        'excel_info': '💡 Excel dosyası 6 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler, Fatura Vade Dağılımı ve Çek Vade Dağılımı',
+        'chart_analysis': '📊 Grafik Analizler',
+        'maturity_distribution': '📈 Vade Dağılımı',
+        'comparison': '🎯 Karşılaştırma',
+        'timeline': '📅 Zaman Çizelgesi',
+        'detailed_analysis': '💹 Detaylı Analiz',
+        'currency': '₺',
+        'date_format': '%d.%m.%Y',
+        'excel_date_format': 'dd.mm.yyyy',
+        'excel_currency': '₺#,##0.00',
+        'sheet_summary': 'Özet',
+        'sheet_calculation': 'Hesaplama Detayı',
+        'sheet_invoices': 'Faturalar',
+        'sheet_checks': 'Çekler',
+        'sheet_invoice_distribution': 'Fatura Vade Dağılımı',
+        'sheet_check_distribution': 'Çek Vade Dağılımı',
+        'add_one_check': '⚠️ Lütfen en az bir çek ekleyin!',
+        'add_one_invoice': '⚠️ Lütfen en az bir fatura ekleyin!',
+        'add_to_calculate': '📝 Fatura ve çek ekleyerek hesaplama yapın.',
+        'footer': '© 2025 Ortalama Vade Hesaplama Programı | By Goksel',
+        'invoice_maturity_dist': '📝 Fatura Vade Dağılımı (Valör Bazlı)',
+        'invoice_amount_by_groups': 'Vade Gruplarına Göre Fatura Tutarları',
+        'invoice_maturity_ratios': 'Fatura Vade Oranları',
+        'check_maturity_dist': '💳 Çek Vade Dağılımı',
+        'check_amount_by_groups': 'Vade Gruplarına Göre Çek Tutarları',
+        'check_maturity_ratios': 'Çek Vade Oranları',
+        'maturity_group': 'Vade Grubu',
+        'count': 'Adet',
+        'ratio': 'Oran (%)',
+        'invoice_vs_check': '🎯 Fatura vs Çek Karşılaştırması',
+        'category': 'Kategori',
+        'total_amount': 'Toplam Tutar',
+        'average': 'Ortalama',
+        'amount_comparison': 'Toplam Tutar Karşılaştırması',
+        'count_comparison': 'Adet',
+        'average_amount': 'Ortalama Tutar',
+        'avg_maturity_comparison': '📊 Ortalama Vade Karşılaştırması',
+        'maturity_type': 'Vade Türü',
+        'average_days': 'Ortalama Gün',
+        'value_maturity': 'Valör Vadesi',
+        'check_maturity': 'Çek Vadesi',
+        'maturity_timeline': '📅 Vade Zaman Çizelgesi',
+        'invoice_check_timeline': 'Fatura ve Çek Vade Zaman Çizelgesi',
+        'date': 'Tarih',
+        'maturity_amount_relation': '📊 Vade-Tutar İlişkisi',
+        'invoice_by_maturity': 'Vade Periyoduna Göre Fatura Tutarları',
+        'amount': 'Tutar',
+        'type': 'Tür',
+        'detailed_stats': '💹 Detaylı İstatistik Analizi',
+        'invoice_stats': '📋 Fatura İstatistikleri',
+        'check_stats': '💳 Çek İstatistikleri',
+        'maturity_stats': '📊 Vade İstatistikleri',
+        'total_invoice_count': 'Toplam Fatura Sayısı',
+        'total_check_count': 'Toplam Çek Sayısı',
+        'median_amount': 'Medyan Tutar',
+        'std_deviation': 'Standart Sapma',
+        'maturity_std_dev': 'Vade Std Sapma',
+        'amount_dist_histogram': '📊 Tutar Dağılım Histogramı',
+        'invoice_amount_dist': 'Fatura Tutar Dağılımı',
+        'maturity_period_dist': 'Vade Periyodu Dağılımı',
+        'frequency': 'Frekans',
+        'general_maturity_analysis': '📊 Genel Vade Analizi',
+        'detailed_calc_table': '📋 Detaylı Hesaplama Tablosu',
+        'shortest_maturity': 'En Kısa Vade',
+        'longest_maturity': 'En Uzun Vade',
+        'average_maturity': 'Ortalama Vade',
+        'standard_deviation': 'Standart Sapma',
+        'check_based_analysis': '💳 Çek Bazlı Vade Analizi',
+        'avg_value_mat': '📅 Ort. Valör Vadesi',
+        'avg_check_mat': '📝 Ort. Çek Vadesi',
+        'value_mat_stats': '**Valör Vadesi İstatistikleri:**',
+        'check_mat_stats': '**Çek Vadesi İstatistikleri:**',
+        'related_invoices': '**📋 İlgili Faturalar:**',
+        'no_checks_warning': '⚠️ Lütfen en az bir çek ekleyin!',
+        'no_invoices_warning': '⚠️ Lütfen en az bir fatura ekleyin!',
+        'add_data_info': '📝 Hesaplama yapmak için fatura ve çek ekleyin.',
+        'min': 'Min',
+        'max': 'Max',
+        'std': 'Std'
+    },
+    'EN': {
+        'page_title': 'Average Maturity Calculation',
+        'app_title': '📊 Average Maturity Calculation Program',
+        'history_btn': '📚 Calculation History',
+        'last_calculations': '📚 Last 5 Calculations',
+        'invoice': 'Invoice',
+        'check': 'Check',
+        'items': 'items',
+        'load': '📂 Load',
+        'close': '❌ Close',
+        'loaded_success': 'calculation loaded!',
+        'invoice_info': '📝 Invoice Information',
+        'invoice_no': 'Invoice No',
+        'invoice_no_placeholder': 'e.g: INV-2025-001',
+        'invoice_amount': 'Invoice Amount ($)',
+        'amount_placeholder': 'e.g: 10000',
+        'invoice_date': 'Invoice Date',
+        'maturity_days': 'Maturity (Days)',
+        'value_date': 'Value Date',
+        'days_later': 'days later',
+        'add_invoice': '➕ Add Invoice',
+        'added': 'added!',
+        'already_exists': 'already exists!',
+        'fill_all_fields': 'Please fill in all fields!',
+        'added_invoices': '📋 Added Invoices',
+        'days': 'days',
+        'delete': 'Delete',
+        'clear_all_invoices': '🗑️ Clear All Invoices',
+        'use_form_above': '👆 Use the form above to add invoices.',
+        'check_info': '💳 Check Information',
+        'customer_name': '👤 Customer Name',
+        'customer_placeholder': 'e.g: ABC Ltd. Co.',
+        'recent_customers': 'Recently used customers:',
+        'check_no': 'Check No',
+        'check_no_placeholder': 'e.g: CHK-001',
+        'check_amount': 'Check Amount ($)',
+        'check_maturity_date': 'Check Maturity Date',
+        'maturity': 'Maturity',
+        'from_invoice_date': 'From invoice date',
+        'onwards': '',
+        'add_invoice_first': '⚠️ Add invoice first',
+        'add_check': '➕ Add Check',
+        'customer': 'Customer',
+        'fill_all_fields_customer': 'Please fill in all fields (including customer name)!',
+        'added_checks': '📋 Added Checks',
+        'unknown': 'Unknown',
+        'clear_all_checks': '🗑️ Clear All Checks',
+        'add_checks_info': '💡 Add checks you will receive from customers',
+        'check_maturity_info': '💡 Check maturity date is automatically set to 90 days after invoice date. 🟢 Less than 90 days = Good, 🔴 More than 90 days = Caution!',
+        'calculation_results': '💰 Calculation Results',
+        'filter': '🔍 Filter',
+        'filter_options': '🔍 Data Filtering Options',
+        'amount_range': 'Amount Range ($)',
+        'min_amount': 'Min Amount',
+        'max_amount': 'Max Amount',
+        'maturity_range': 'Maturity Range (Days)',
+        'min_maturity': 'Min Maturity',
+        'max_maturity': 'Max Maturity',
+        'apply_filter': '✅ Apply Filter',
+        'filter_applied': '✅ Filter applied!',
+        'no_data_filter': '⚠️ No data found matching filter criteria!',
+        'total_invoice': 'Total Invoice',
+        'total_check': 'Total Check',
+        'difference': 'Difference',
+        'surplus': 'Surplus ✅',
+        'deficit': 'Deficit ⚠️',
+        'avg_value_maturity': 'Avg. Value Maturity',
+        'avg_check_maturity': 'Avg. Check Maturity',
+        'download_results': '📥 Download Calculation Results',
+        'download_excel': '📥 Download All Details to Excel (Formatted)',
+        'excel_info': '💡 Excel file contains 6 sheets: Summary, Calculation Detail, Invoices, Checks, Invoice Maturity Distribution and Check Maturity Distribution',
+        'chart_analysis': '📊 Chart Analysis',
+        'maturity_distribution': '📈 Maturity Distribution',
+        'comparison': '🎯 Comparison',
+        'timeline': '📅 Timeline',
+        'detailed_analysis': '💹 Detailed Analysis',
+        'currency': '$',
+        'date_format': '%m/%d/%Y',
+        'excel_date_format': 'mm/dd/yyyy',
+        'excel_currency': '$#,##0.00',
+        'sheet_summary': 'Summary',
+        'sheet_calculation': 'Calculation Detail',
+        'sheet_invoices': 'Invoices',
+        'sheet_checks': 'Checks',
+        'sheet_invoice_distribution': 'Invoice Maturity Distribution',
+        'sheet_check_distribution': 'Check Maturity Distribution',
+        'add_one_check': '⚠️ Please add at least one check!',
+        'add_one_invoice': '⚠️ Please add at least one invoice!',
+        'add_to_calculate': '📝 Add invoices and checks to perform calculation.',
+        'footer': '© 2025 Average Maturity Calculation Program | By Goksel',
+        'invoice_maturity_dist': '📝 Invoice Maturity Distribution (Value Based)',
+        'invoice_amount_by_groups': 'Invoice Amount by Maturity Groups',
+        'invoice_maturity_ratios': 'Invoice Maturity Ratios',
+        'check_maturity_dist': '💳 Check Maturity Distribution',
+        'check_amount_by_groups': 'Check Amount by Maturity Groups',
+        'check_maturity_ratios': 'Check Maturity Ratios',
+        'maturity_group': 'Maturity Group',
+        'count': 'Count',
+        'ratio': 'Ratio (%)',
+        'invoice_vs_check': '🎯 Invoice vs Check Comparison',
+        'category': 'Category',
+        'total_amount': 'Total Amount',
+        'average': 'Average',
+        'amount_comparison': 'Total Amount Comparison',
+        'count_comparison': 'Count',
+        'average_amount': 'Average Amount',
+        'avg_maturity_comparison': '📊 Average Maturity Comparison',
+        'maturity_type': 'Maturity Type',
+        'average_days': 'Average Days',
+        'value_maturity': 'Value Maturity',
+        'check_maturity': 'Check Maturity',
+        'maturity_timeline': '📅 Maturity Timeline',
+        'invoice_check_timeline': 'Invoice and Check Maturity Timeline',
+        'date': 'Date',
+        'maturity_amount_relation': '📊 Maturity-Amount Relationship',
+        'invoice_by_maturity': 'Invoice Amounts by Maturity Period',
+        'amount': 'Amount',
+        'type': 'Type',
+        'detailed_stats': '💹 Detailed Statistical Analysis',
+        'invoice_stats': '📋 Invoice Statistics',
+        'check_stats': '💳 Check Statistics',
+        'maturity_stats': '📊 Maturity Statistics',
+        'total_invoice_count': 'Total Invoice Count',
+        'total_check_count': 'Total Check Count',
+        'median_amount': 'Median Amount',
+        'std_deviation': 'Std Deviation',
+        'maturity_std_dev': 'Maturity Std Dev',
+        'amount_dist_histogram': '📊 Amount Distribution Histogram',
+        'invoice_amount_dist': 'Invoice Amount Distribution',
+        'maturity_period_dist': 'Maturity Period Distribution',
+        'frequency': 'Frequency',
+        'general_maturity_analysis': '📊 General Maturity Analysis',
+        'detailed_calc_table': '📋 Detailed Calculation Table',
+        'shortest_maturity': 'Shortest Maturity',
+        'longest_maturity': 'Longest Maturity',
+        'average_maturity': 'Average Maturity',
+        'standard_deviation': 'Standard Deviation',
+        'check_based_analysis': '💳 Check-Based Maturity Analysis',
+        'avg_value_mat': '📅 Avg. Value Maturity',
+        'avg_check_mat': '📝 Avg. Check Maturity',
+        'value_mat_stats': '**Value Maturity Statistics:**',
+        'check_mat_stats': '**Check Maturity Statistics:**',
+        'related_invoices': '**📋 Related Invoices:**',
+        'no_checks_warning': '⚠️ Please add at least one check!',
+        'no_invoices_warning': '⚠️ Please add at least one invoice!',
+        'add_data_info': '📝 Add invoices and checks to perform calculation.',
+        'min': 'Min',
+        'max': 'Max',
+        'std': 'Std'
+    }
+}
+
+# --- EXCEL DOWNLOAD FUNCTION (ADVANCED) ---
+def to_excel_bytes(df_dict, lang='TR'):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         workbook = writer.book
         
-        # Format tanımlamaları
+        # Format definitions
         header_format = workbook.add_format({
             'bold': True,
             'bg_color': '#4472C4',
@@ -25,7 +329,7 @@ def to_excel_bytes(df_dict):
         })
         
         currency_format = workbook.add_format({
-            'num_format': '₺#,##0.00',
+            'num_format': LANGUAGES[lang]['excel_currency'],
             'border': 1
         })
         
@@ -35,7 +339,7 @@ def to_excel_bytes(df_dict):
         })
         
         date_format = workbook.add_format({
-            'num_format': 'dd.mm.yyyy',
+            'num_format': LANGUAGES[lang]['excel_date_format'],
             'border': 1,
             'align': 'center'
         })
@@ -44,30 +348,32 @@ def to_excel_bytes(df_dict):
             df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=1, header=False)
             worksheet = writer.sheets[sheet_name]
             
-            # Başlıkları formatla
+            # Format headers
             for col_num, value in enumerate(df.columns.values):
                 worksheet.write(0, col_num, value, header_format)
             
-            # Sütun genişliklerini ayarla ve formatla
+            # Adjust column widths and format
             for idx, col in enumerate(df.columns):
                 max_length = max(df[col].astype(str).map(len).max(), len(col)) + 2
                 worksheet.set_column(idx, idx, max_length)
                 
-                # Para birimi sütunları için format
-                if 'Tutar' in col or 'Toplam' in col:
+                # Format for currency columns
+                if any(keyword in col for keyword in ['Amount', 'Total', 'Tutar', 'Toplam']):
                     for row_num in range(1, len(df) + 1):
                         worksheet.write(row_num, idx, df.iloc[row_num-1][col], currency_format)
-                # Sayı sütunları için format (Vade Farkı dahil)
-                elif 'Gün' in col or 'Vade' in col or 'Adet' in col or 'Fark' in col:
+                # Format for number columns (including Maturity Difference)
+                elif any(keyword in col for keyword in ['Days', 'Maturity', 'Count', 'Difference', 'Gün', 'Vade', 'Adet', 'Fark']):
                     for row_num in range(1, len(df) + 1):
                         worksheet.write(row_num, idx, df.iloc[row_num-1][col], number_format)
     
     return output.getvalue()
 
-# Ana uygulama başlığı
-st.set_page_config(page_title="Ortalama Vade Hesaplama", page_icon="📊", layout="wide")
+# Main application title
+st.set_page_config(page_title="Average Maturity Calculation", page_icon="📊", layout="wide")
 
 # Session state başlatma - EN BAŞTA OLMALI
+if 'language' not in st.session_state:
+    st.session_state.language = 'TR'  # Default language
 if 'faturalar' not in st.session_state:
     st.session_state.faturalar = []
 if 'cekler' not in st.session_state:
@@ -158,34 +464,53 @@ def sanitize_records(records):
         cleaned.append(rec_copy)
     return cleaned
 
-# Başlık ve geçmiş butonu
+# Get current language texts
+lang = st.session_state.language
+t = LANGUAGES[lang]
+
+# Language selector in sidebar
+with st.sidebar:
+    st.markdown("### 🌐 Language / Dil")
+    selected_lang = st.radio(
+        "Select Language",
+        options=['TR', 'EN'],
+        format_func=lambda x: '🇹🇷 Türkçe' if x == 'TR' else '🇬🇧 English',
+        index=0 if st.session_state.language == 'TR' else 1,
+        key='lang_selector'
+    )
+    if selected_lang != st.session_state.language:
+        st.session_state.language = selected_lang
+        st.rerun()
+    st.divider()
+
+# Title and history button
 title_col1, title_col2 = st.columns([4, 1])
 with title_col1:
-    st.title("📊 Ortalama Vade Hesaplama Programı")
+    st.title(t['app_title'])
 with title_col2:
     if st.session_state.hesaplama_gecmisi:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("📚 Geçmiş Hesaplamalar", use_container_width=True, type="secondary"):
+        if st.button(t['history_btn'], use_container_width=True, type="secondary"):
             st.session_state.show_history = not st.session_state.get('show_history', False)
             st.rerun()
 
-# Geçmiş hesaplamaları göster
+# Show calculation history
 if st.session_state.get('show_history', False) and st.session_state.hesaplama_gecmisi:
-    with st.expander("📚 Son 5 Hesaplama", expanded=True):
+    with st.expander(t['last_calculations'], expanded=True):
         for idx, gecmis in enumerate(st.session_state.hesaplama_gecmisi):
             col1, col2, col3 = st.columns([3, 2, 1])
             with col1:
                 st.write(f"**{idx+1}.** {gecmis['tarih']}")
             with col2:
-                st.write(f"Fatura: {gecmis['fatura_adet']} adet, Çek: {gecmis['cek_adet']} adet")
+                st.write(f"{t['invoice']}: {gecmis['fatura_adet']} {t['items']}, {t['check']}: {gecmis['cek_adet']} {t['items']}")
             with col3:
-                if st.button("📂 Yükle", key=f"load_history_{idx}", use_container_width=True):
+                if st.button(t['load'], key=f"load_history_{idx}", use_container_width=True):
                     st.session_state.faturalar = gecmis['faturalar']
                     st.session_state.cekler = gecmis['cekler']
-                    st.success(f"✅ {gecmis['tarih']} tarihli hesaplama yüklendi!")
+                    st.success(f"✅ {gecmis['tarih']} {t['loaded_success']}")
                     st.session_state.show_history = False
                     st.rerun()
-        if st.button("❌ Kapat", use_container_width=True):
+        if st.button(t['close'], use_container_width=True):
             st.session_state.show_history = False
             st.rerun()
     st.divider()
@@ -193,29 +518,29 @@ if st.session_state.get('show_history', False) and st.session_state.hesaplama_ge
 # Ana içerik - 2 sütun
 col1, col2 = st.columns([1, 1])
 
-# SOL SÜTUN: Fatura Bilgileri
+# LEFT COLUMN: Invoice Information
 with col1:
-    st.subheader("📝 Fatura Bilgileri")
+    st.subheader(t['invoice_info'])
     
-    # HIZLI FATURA GİRİŞİ
+    # QUICK INVOICE ENTRY
     form_col1, form_col2 = st.columns([2, 2])
     with form_col1:
-        fatura_no = st.text_input("Fatura No", placeholder="örn: FAT-2025-001", key="fatura_no")
+        fatura_no = st.text_input(t['invoice_no'], placeholder=t['invoice_no_placeholder'], key="fatura_no")
     with form_col2:
         fatura_tutari = st.number_input(
-            "Fatura Tutarı (₺)", 
+            t['invoice_amount'], 
             min_value=0.0, 
             step=100.0,
             format="%.2f",
             key="fatura_tutari",
             value=None,
-            placeholder="örn: 10000"
+            placeholder=t['amount_placeholder']
         )
     
     form_col3, form_col4 = st.columns([2, 2])
     with form_col3:
         fatura_tarihi_input = st.date_input(
-            "Fatura Tarihi", 
+            t['invoice_date'], 
             value=datetime.now().date(),
             key="fatura_tarihi_input"
         )
@@ -229,7 +554,7 @@ with col1:
     
     with form_col4:
         vade_gun = st.number_input(
-            "Vade (Gün)",
+            t['maturity_days'],
             min_value=0,
             max_value=365,
             value=90,
@@ -238,18 +563,18 @@ with col1:
         )
         if fatura_tarihi is not None and hasattr(fatura_tarihi, 'strftime'):
             hesaplanan_valor = fatura_tarihi + timedelta(days=vade_gun)
-            valor_str = hesaplanan_valor.strftime('%d.%m.%Y')
+            valor_str = hesaplanan_valor.strftime(t['date_format'])
         else:
             hesaplanan_valor = None
             valor_str = "-"
-        st.info(f"📅 Valör Tarihi: **{valor_str}** ({vade_gun} gün sonra)")
+        st.info(f"📅 {t['value_date']}: **{valor_str}** ({vade_gun} {t['days_later']})")
 
-    # Ekle butonu
-    if st.button("➕ Fatura Ekle", type="primary", use_container_width=True, key="add_fatura_btn"):
+    # Add button
+    if st.button(t['add_invoice'], type="primary", use_container_width=True, key="add_fatura_btn"):
         if fatura_no and fatura_tutari and fatura_tutari > 0:
             if not any(f['Fatura No'] == fatura_no for f in st.session_state.faturalar):
-                fatura_tarihi_str = fatura_tarihi.strftime('%d.%m.%Y') if fatura_tarihi is not None and hasattr(fatura_tarihi, 'strftime') else "-"
-                valor_str = hesaplanan_valor.strftime('%d.%m.%Y') if hesaplanan_valor is not None and hasattr(hesaplanan_valor, 'strftime') else "-"
+                fatura_tarihi_str = fatura_tarihi.strftime(t['date_format']) if fatura_tarihi is not None and hasattr(fatura_tarihi, 'strftime') else "-"
+                valor_str = hesaplanan_valor.strftime(t['date_format']) if hesaplanan_valor is not None and hasattr(hesaplanan_valor, 'strftime') else "-"
                 st.session_state.faturalar.append({
                     'Fatura No': fatura_no,
                     'Tutar': fatura_tutari,
@@ -259,47 +584,47 @@ with col1:
                     'Fatura Tarihi Raw': fatura_tarihi,
                     'Valör Tarihi Raw': hesaplanan_valor
                 })
-                st.success(f"✅ {fatura_no} eklendi!")
+                st.success(f"✅ {fatura_no} {t['added']}")
                 st.rerun()
             else:
-                st.error(f"❌ {fatura_no} zaten ekli!")
+                st.error(f"❌ {fatura_no} {t['already_exists']}")
         else:
-            st.error("❌ Lütfen tüm alanları doldurun!")
+            st.error(f"❌ {t['fill_all_fields']}")
 
-    # Fatura listesi
+    # Invoice list
     if st.session_state.faturalar:
-        st.markdown("#### 📋 Eklenen Faturalar")
+        st.markdown(f"#### {t['added_invoices']}")
         
         for idx, fatura in enumerate(st.session_state.faturalar):
             fcol1, fcol2 = st.columns([5, 1])
             with fcol1:
-                st.text(f"{fatura['Fatura No']}: ₺{fatura['Tutar']:,.2f} | {fatura['Vade (Gün)']} gün | Fatura: {fatura['Fatura Tarihi']} → Valör: {fatura['Valör Tarihi']}")
+                st.text(f"{fatura['Fatura No']}: {t['currency']}{fatura['Tutar']:,.2f} | {fatura['Vade (Gün)']} {t['days']} | {t['invoice']}: {fatura['Fatura Tarihi']} → {t['value_date']}: {fatura['Valör Tarihi']}")
             with fcol2:
-                if st.button("🗑️", key=f"del_fatura_{idx}", help="Sil"):
+                if st.button("🗑️", key=f"del_fatura_{idx}", help=t['delete']):
                     st.session_state.faturalar.pop(idx)
                     st.rerun()
         
-        # Temizleme butonu
-        if st.button("🗑️ Tüm Faturaları Temizle", type="secondary"):
+        # Clear button
+        if st.button(t['clear_all_invoices'], type="secondary"):
             st.session_state.faturalar = []
             st.rerun()
     else:
-        st.info("👆 Yukarıdaki formu kullanarak fatura ekleyin.")
+        st.info(t['use_form_above'])
 
-# SAĞ SÜTUN: Çek Bilgileri
+# RIGHT COLUMN: Check Information
 with col2:
-    st.subheader("💳 Çek Bilgileri")
+    st.subheader(t['check_info'])
     
-    # MÜŞTERİ BİLGİSİ
+    # CUSTOMER INFORMATION
     musteri_adi = st.text_input(
-        "👤 Müşteri Adı", 
-        placeholder="örn: ABC Ltd. Şti.",
+        t['customer_name'], 
+        placeholder=t['customer_placeholder'],
         key="musteri_adi"
     )
     
-    # SON 5 MÜŞTERİ HIZLI SEÇİM
+    # LAST 5 CUSTOMER QUICK SELECT
     if st.session_state.musteri_gecmisi:
-        st.caption("Son kullanılan müşteriler:")
+        st.caption(t['recent_customers'])
         musteri_col = st.columns(min(len(st.session_state.musteri_gecmisi), 5))
         for idx, musteri in enumerate(st.session_state.musteri_gecmisi[:5]):
             with musteri_col[idx]:
@@ -307,19 +632,19 @@ with col2:
                     st.session_state.musteri_adi = musteri
                     st.rerun()
     
-    # ÇEK GİRİŞİ
+    # CHECK ENTRY
     cek_col1, cek_col2 = st.columns([2, 2])
     with cek_col1:
-        cek_no = st.text_input("Çek No", placeholder="örn: ÇEK-001", key="cek_no")
+        cek_no = st.text_input(t['check_no'], placeholder=t['check_no_placeholder'], key="cek_no")
     with cek_col2:
         cek_tutari = st.number_input(
-            "Çek Tutarı (₺)", 
+            t['check_amount'], 
             min_value=0.0, 
             step=100.0,
             format="%.2f",
             key="cek_tutari",
             value=None,
-            placeholder="örn: 10000"
+            placeholder=t['amount_placeholder']
         )
     
     cek_col3, cek_col4 = st.columns([2, 2])
@@ -341,7 +666,7 @@ with col2:
             default_cek_tarihi = datetime.now().date() + timedelta(days=90)
         
         cek_vade_tarihi = st.date_input(
-            "Çek Vade Tarihi",
+            t['check_maturity_date'],
             value=default_cek_tarihi,
             key="cek_vade_tarihi"
         )
@@ -352,29 +677,29 @@ with col2:
                 cek_vade_tarihi = default_cek_tarihi
     
     with cek_col4:
-        # Vade gün hesaplama - fatura tarihinden
+        # Maturity day calculation - from invoice date
         if st.session_state.faturalar and ilk_fatura_tarihi_cek:
             cek_vade_gun = (cek_vade_tarihi - ilk_fatura_tarihi_cek).days
-            referans_tarihi_str = ilk_fatura_tarihi_cek.strftime('%d.%m.%Y')
+            referans_tarihi_str = ilk_fatura_tarihi_cek.strftime(t['date_format'])
             
-            # Vade süresine göre renk ve emoji belirleme
+            # Determine color and emoji based on maturity period
             if cek_vade_gun > 90:
-                vade_renk = "error"  # Kırmızı
+                vade_renk = "error"  # Red
                 vade_emoji = "⚠️"
-                vade_mesaj = f"📅 Vade: **{cek_vade_gun} gün** sonra {vade_emoji}"
-                vade_detay = f"Fatura tarihinden ({referans_tarihi_str}) itibaren"
+                vade_mesaj = f"📅 {t['maturity']}: **{cek_vade_gun} {t['days']}** {t['days_later']} {vade_emoji}"
+                vade_detay = f"{t['from_invoice_date']} ({referans_tarihi_str}) {t['onwards']}"
             elif cek_vade_gun < 90:
-                vade_renk = "success"  # Yeşil
+                vade_renk = "success"  # Green
                 vade_emoji = "✅"
-                vade_mesaj = f"📅 Vade: **{cek_vade_gun} gün** sonra {vade_emoji}"
-                vade_detay = f"Fatura tarihinden ({referans_tarihi_str}) itibaren"
+                vade_mesaj = f"📅 {t['maturity']}: **{cek_vade_gun} {t['days']}** {t['days_later']} {vade_emoji}"
+                vade_detay = f"{t['from_invoice_date']} ({referans_tarihi_str}) {t['onwards']}"
             else:  # cek_vade_gun == 90
-                vade_renk = "info"  # Mavi
+                vade_renk = "info"  # Blue
                 vade_emoji = "ℹ️"
-                vade_mesaj = f"📅 Vade: **{cek_vade_gun} gün** sonra {vade_emoji}"
-                vade_detay = f"Fatura tarihinden ({referans_tarihi_str}) itibaren"
+                vade_mesaj = f"📅 {t['maturity']}: **{cek_vade_gun} {t['days']}** {t['days_later']} {vade_emoji}"
+                vade_detay = f"{t['from_invoice_date']} ({referans_tarihi_str}) {t['onwards']}"
             
-            # Renkli uyarı göster
+            # Show colored warning
             if vade_renk == "error":
                 st.error(vade_mesaj)
                 st.caption(vade_detay)
@@ -386,28 +711,28 @@ with col2:
                 st.caption(vade_detay)
         else:
             cek_vade_gun = (cek_vade_tarihi - datetime.now().date()).days
-            st.warning(f"📅 Vade: **{cek_vade_gun} gün** sonra")
-            st.caption("⚠️ Önce fatura ekleyin")
+            st.warning(f"📅 {t['maturity']}: **{cek_vade_gun} {t['days']}** {t['days_later']}")
+            st.caption(t['add_invoice_first'])
 
-    # Ekle butonu
-    if st.button("➕ Çek Ekle", type="primary", use_container_width=True, key="add_cek_btn"):
+    # Add button
+    if st.button(t['add_check'], type="primary", use_container_width=True, key="add_cek_btn"):
         if cek_no and cek_tutari and cek_tutari > 0 and musteri_adi:
             if not any(c['Çek No'] == cek_no for c in st.session_state.cekler):
-                cek_vade_tarihi_str = cek_vade_tarihi.strftime('%d.%m.%Y') if hasattr(cek_vade_tarihi, 'strftime') else "-"
+                cek_vade_tarihi_str = cek_vade_tarihi.strftime(t['date_format']) if hasattr(cek_vade_tarihi, 'strftime') else "-"
                 
-                # Vade gün bilgisini hesapla
+                # Calculate maturity days
                 if st.session_state.faturalar and ilk_fatura_tarihi_cek:
                     cek_vade_gun_kayit = (cek_vade_tarihi - ilk_fatura_tarihi_cek).days
                 else:
                     cek_vade_gun_kayit = (cek_vade_tarihi - datetime.now().date()).days
                 
-                # Müşteri geçmişine ekle (son 5'i tut)
+                # Add to customer history (keep last 5)
                 if musteri_adi not in st.session_state.musteri_gecmisi:
                     st.session_state.musteri_gecmisi.insert(0, musteri_adi)
                     if len(st.session_state.musteri_gecmisi) > 5:
                         st.session_state.musteri_gecmisi = st.session_state.musteri_gecmisi[:5]
                 else:
-                    # Eğer varsa en başa taşı
+                    # If exists, move to top
                     st.session_state.musteri_gecmisi.remove(musteri_adi)
                     st.session_state.musteri_gecmisi.insert(0, musteri_adi)
                 
@@ -419,43 +744,43 @@ with col2:
                     'Vade Tarihi Raw': cek_vade_tarihi,
                     'Vade (Gün)': cek_vade_gun_kayit
                 })
-                st.success(f"✅ {cek_no} eklendi! (Müşteri: {musteri_adi})")
+                st.success(f"✅ {cek_no} {t['added']} ({t['customer']}: {musteri_adi})")
                 st.rerun()
             else:
-                st.error(f"❌ {cek_no} zaten ekli!")
+                st.error(f"❌ {cek_no} {t['already_exists']}")
         else:
-            st.error("❌ Lütfen tüm alanları doldurun (Müşteri adı dahil)!")
+            st.error(f"❌ {t['fill_all_fields_customer']}")
 
-    # Çek listesi
+    # Check list
     if st.session_state.cekler:
-        st.markdown("#### 📋 Eklenen Çekler")
+        st.markdown(f"#### {t['added_checks']}")
         
         for idx, cek in enumerate(st.session_state.cekler):
             ccol1, ccol2 = st.columns([5, 1])
             with ccol1:
-                # Vade gün bilgisini göster
+                # Show maturity day info
                 vade_gun_info = cek.get('Vade (Gün)', 0)
-                musteri_info = cek.get('Müşteri', 'Bilinmiyor')
+                musteri_info = cek.get('Müşteri', t['unknown'])
                 if vade_gun_info > 90:
                     vade_icon = "🔴"
                 elif vade_gun_info < 90:
                     vade_icon = "🟢"
                 else:
                     vade_icon = "🔵"
-                st.text(f"👤 {musteri_info} | {cek['Çek No']}: ₺{cek['Tutar']:,.2f} | Vade: {cek['Vade Tarihi']} ({vade_gun_info} gün {vade_icon})")
+                st.text(f"👤 {musteri_info} | {cek['Çek No']}: {t['currency']}{cek['Tutar']:,.2f} | {t['maturity']}: {cek['Vade Tarihi']} ({vade_gun_info} {t['days']} {vade_icon})")
             with ccol2:
-                if st.button("🗑️", key=f"del_cek_{idx}", help="Sil"):
+                if st.button("🗑️", key=f"del_cek_{idx}", help=t['delete']):
                     st.session_state.cekler.pop(idx)
                     st.rerun()
         
-        if st.button("🗑️ Tüm Çekleri Temizle", type="secondary"):
+        if st.button(t['clear_all_checks'], type="secondary"):
             st.session_state.cekler = []
             st.rerun()
     else:
-        st.info("💡 Müşteriden alacağınız çekleri ekleyin")
+        st.info(t['add_checks_info'])
 
 st.divider()
-st.info("💡 Çek vade tarihi otomatik olarak fatura tarihinden 90 gün sonraya ayarlanır. 🟢 90 günden az = İyi, 🔴 90 günden fazla = Dikkat!")
+st.info(t['check_maturity_info'])
 st.divider()
 
 # GENİŞ EKRAN İÇİN CSS
@@ -508,32 +833,34 @@ if st.session_state.faturalar and st.session_state.cekler:
         if len(st.session_state.hesaplama_gecmisi) > 5:
             st.session_state.hesaplama_gecmisi = st.session_state.hesaplama_gecmisi[:5]
     
-    st.markdown("## 💰 Hesaplama Sonuçları")
+    st.markdown("## 💰 Calculation Results")
     
-    # FİLTRELEME BÖLÜMÜ
+    st.markdown(f"## {t['calculation_results']}")
+    
+    # FILTERING SECTION
     col_filter1, col_filter2 = st.columns([1, 4])
     with col_filter1:
-        if st.button("🔍 Filtreleme", use_container_width=True):
+        if st.button(t['filter'], use_container_width=True):
             st.session_state.show_filters = not st.session_state.show_filters
     
     if st.session_state.show_filters:
-        with st.expander("🔍 Veri Filtreleme Seçenekleri", expanded=True):
+        with st.expander(t['filter_options'], expanded=True):
             filter_col1, filter_col2 = st.columns(2)
             with filter_col1:
-                st.markdown("**Tutar Aralığı (₺)**")
-                filter_min_tutar = st.number_input("Min Tutar", min_value=0.0, value=0.0, step=1000.0, key="filter_min_input")
-                filter_max_tutar = st.number_input("Max Tutar", min_value=0.0, value=1000000.0, step=1000.0, key="filter_max_input")
+                st.markdown(f"**{t['amount_range']}**")
+                filter_min_tutar = st.number_input(t['min_amount'], min_value=0.0, value=0.0, step=1000.0, key="filter_min_input")
+                filter_max_tutar = st.number_input(t['max_amount'], min_value=0.0, value=1000000.0, step=1000.0, key="filter_max_input")
             with filter_col2:
-                st.markdown("**Vade Aralığı (Gün)**")
-                filter_min_vade = st.number_input("Min Vade", min_value=0, value=0, step=10, key="filter_vade_min_input")
-                filter_max_vade = st.number_input("Max Vade", min_value=0, value=365, step=10, key="filter_vade_max_input")
+                st.markdown(f"**{t['maturity_range']}**")
+                filter_min_vade = st.number_input(t['min_maturity'], min_value=0, value=0, step=10, key="filter_vade_min_input")
+                filter_max_vade = st.number_input(t['max_maturity'], min_value=0, value=365, step=10, key="filter_vade_max_input")
             
-            if st.button("✅ Filtreyi Uygula", type="primary", use_container_width=True):
+            if st.button(t['apply_filter'], type="primary", use_container_width=True):
                 st.session_state.filter_min_tutar = filter_min_tutar
                 st.session_state.filter_max_tutar = filter_max_tutar
                 st.session_state.filter_min_vade = filter_min_vade
                 st.session_state.filter_max_vade = filter_max_vade
-                st.success("✅ Filtre uygulandı!")
+                st.success(t['filter_applied'])
                 st.rerun()
     
     # Sanitize monetary amounts before creating DataFrames
@@ -556,9 +883,9 @@ if st.session_state.faturalar and st.session_state.cekler:
         (df_cekler['Tutar'] <= st.session_state.filter_max_tutar)
     ].copy()
     
-    # Eğer filtre sonucu veri yoksa uyarı ver
+    # Warn if no data matches filter
     if df_faturalar_filtered.empty or df_cekler_filtered.empty:
-        st.warning("⚠️ Filtre kriterleriyle eşleşen veri bulunamadı!")
+        st.warning(t['no_data_filter'])
         df_faturalar_filtered = df_faturalar
         df_cekler_filtered = df_cekler
     
@@ -588,20 +915,32 @@ if st.session_state.faturalar and st.session_state.cekler:
             })
     df_hesap = pd.DataFrame(hesaplamalar)
 
-    # Özet metrikler için DataFrame
+    # DataFrame for summary metrics
     df_ozet = pd.DataFrame([
-        {"Açıklama": "Toplam Fatura", "Tutar": toplam_fatura, "Adet": len(df_faturalar_filtered)},
-        {"Açıklama": "Toplam Çek", "Tutar": toplam_cek, "Adet": len(df_cekler_filtered)},
-        {"Açıklama": "Fark", "Tutar": toplam_cek-toplam_fatura, "Adet": "-"}
+        {t['sheet_summary'].split()[0] if lang == 'EN' else 'Açıklama': t['total_invoice'], 
+         t['sheet_summary'].split()[-1] if lang == 'EN' else 'Tutar': toplam_fatura, 
+         'Adet' if lang == 'TR' else 'Count': len(df_faturalar_filtered)},
+        {t['sheet_summary'].split()[0] if lang == 'EN' else 'Açıklama': t['total_check'], 
+         t['sheet_summary'].split()[-1] if lang == 'EN' else 'Tutar': toplam_cek, 
+         'Adet' if lang == 'TR' else 'Count': len(df_cekler_filtered)},
+        {t['sheet_summary'].split()[0] if lang == 'EN' else 'Açıklama': t['difference'], 
+         t['sheet_summary'].split()[-1] if lang == 'EN' else 'Tutar': toplam_cek-toplam_fatura, 
+         'Adet' if lang == 'TR' else 'Count': "-"}
     ])
     
-    # Faturalar detay tablosu
+    # Invoice detail table
     df_faturalar_detay = df_faturalar_filtered[['Fatura No', 'Tutar', 'Fatura Tarihi', 'Valör Tarihi', 'Vade (Gün)']].copy()
-    df_faturalar_detay.columns = ['Fatura No', 'Tutar (₺)', 'Fatura Tarihi', 'Valör Tarihi', 'Vade (Gün)']
+    if lang == 'TR':
+        df_faturalar_detay.columns = ['Fatura No', f'Tutar ({t["currency"]})', 'Fatura Tarihi', 'Valör Tarihi', 'Vade (Gün)']
+    else:
+        df_faturalar_detay.columns = ['Invoice No', f'Amount ({t["currency"]})', 'Invoice Date', 'Value Date', 'Maturity (Days)']
     
-    # Çekler detay tablosu
+    # Check detail table
     df_cekler_detay = df_cekler_filtered[['Çek No', 'Tutar', 'Vade Tarihi']].copy()
-    df_cekler_detay.columns = ['Çek No', 'Tutar (₺)', 'Vade Tarihi']
+    if lang == 'TR':
+        df_cekler_detay.columns = ['Çek No', f'Tutar ({t["currency"]})', 'Vade Tarihi']
+    else:
+        df_cekler_detay.columns = ['Check No', f'Amount ({t["currency"]})', 'Maturity Date']
 
     # Genel ortalama vadeler hesapla
     tum_fatura_tutarlar = df_faturalar_filtered['Tutar'].tolist()
@@ -638,54 +977,54 @@ if st.session_state.faturalar and st.session_state.cekler:
     
     genel_ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_vade_gunler)
     
-    # Vade dağılım analizi - FATURALAR (Valör bazlı)
+    # Maturity distribution analysis - INVOICES (Value based)
     vade_gruplari = calculations.vade_analizi(tum_fatura_tutarlar, tum_valor_vadeler)
     df_fatura_vade_dagilim = pd.DataFrame([
         {
-            "Vade Grubu": grup,
-            "Tutar (₺)": data['tutar'],
-            "Adet": data['adet'],
-            "Oran (%)": data['oran']
+            'Vade Grubu' if lang == 'TR' else 'Maturity Group': grup,
+            f'Tutar ({t["currency"]})' if lang == 'TR' else f'Amount ({t["currency"]})': data['tutar'],
+            'Adet' if lang == 'TR' else 'Count': data['adet'],
+            'Oran (%)' if lang == 'TR' else 'Ratio (%)': data['oran']
         }
         for grup, data in vade_gruplari.items()
     ])
     
-    # Vade dağılım analizi - ÇEKLER
+    # Maturity distribution analysis - CHECKS
     cek_vade_gruplari = calculations.vade_analizi(tum_cek_tutarlar, tum_cek_vade_gunler)
     df_cek_vade_dagilim = pd.DataFrame([
         {
-            "Vade Grubu": grup,
-            "Tutar (₺)": data['tutar'],
-            "Adet": data['adet'],
-            "Oran (%)": data['oran']
+            'Vade Grubu' if lang == 'TR' else 'Maturity Group': grup,
+            f'Tutar ({t["currency"]})' if lang == 'TR' else f'Amount ({t["currency"]})': data['tutar'],
+            'Adet' if lang == 'TR' else 'Count': data['adet'],
+            'Oran (%)' if lang == 'TR' else 'Ratio (%)': data['oran']
         }
         for grup, data in cek_vade_gruplari.items()
     ])
 
-    # Excel indirme butonu - GELİŞMİŞ
+    # Excel download button - ADVANCED
     excel_data = {
-        "Özet": df_ozet,
-        "Hesaplama Detayı": df_hesap,
-        "Faturalar": df_faturalar_detay,
-        "Çekler": df_cekler_detay,
-        "Fatura Vade Dağılımı": df_fatura_vade_dagilim,
-        "Çek Vade Dağılımı": df_cek_vade_dagilim
+        t['sheet_summary']: df_ozet,
+        t['sheet_calculation']: df_hesap,
+        t['sheet_invoices']: df_faturalar_detay,
+        t['sheet_checks']: df_cekler_detay,
+        t['sheet_invoice_distribution']: df_fatura_vade_dagilim,
+        t['sheet_check_distribution']: df_cek_vade_dagilim
     }
-    excel_bytes = to_excel_bytes(excel_data)
+    excel_bytes = to_excel_bytes(excel_data, lang)
     
     st.markdown("---")
-    st.markdown("### 📥 Hesaplama Sonuçlarını İndir")
+    st.markdown(f"### {t['download_results']}")
     st.download_button(
-        label="📥 Tüm Detayları Excel'e İndir (Formatlanmış)",
+        label=t['download_excel'],
         data=excel_bytes,
-        file_name=f"ortalama_vade_hesaplama_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        file_name=f"average_maturity_calculation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True,
         type="primary"
     )
-    st.caption("💡 Excel dosyası 6 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler, Fatura Vade Dağılımı ve Çek Vade Dağılımı")
+    st.caption(t['excel_info'])
 
-    # GENİŞ METRİK BARI
+    # WIDE METRICS BAR
     st.markdown(f"""
     <style>
     .wide-metrics-bar {{
@@ -741,72 +1080,79 @@ if st.session_state.faturalar and st.session_state.cekler:
     </style>
     <div class='wide-metrics-bar'>
         <div class='metric-block'>
-            <div class='metric-value' style='color: #0d6efd;'>₺{toplam_fatura:,.0f}</div>
-            <div class='metric-label'>Toplam Fatura</div>
+            <div class='metric-value' style='color: #0d6efd;'>{t['currency']}{toplam_fatura:,.0f}</div>
+            <div class='metric-label'>{t['total_invoice']}</div>
         </div>
         <div class='metric-block'>
-            <div class='metric-value' style='color: #198754;'>₺{toplam_cek:,.0f}</div>
-            <div class='metric-label'>Toplam Çek</div>
+            <div class='metric-value' style='color: #198754;'>{t['currency']}{toplam_cek:,.0f}</div>
+            <div class='metric-label'>{t['total_check']}</div>
         </div>
         <div class='metric-block'>
-            <div class='metric-value' style='color: {'#198754' if toplam_cek - toplam_fatura >= 0 else '#dc3545'};'>₺{abs(toplam_cek - toplam_fatura):,.0f}</div>
-            <div class='metric-label'>Fark</div>
-            <div class='metric-sublabel'>{'Fazla ✅' if toplam_cek - toplam_fatura >= 0 else 'Eksik ⚠️'}</div>
+            <div class='metric-value' style='color: {'#198754' if toplam_cek - toplam_fatura >= 0 else '#dc3545'};'>{t['currency']}{abs(toplam_cek - toplam_fatura):,.0f}</div>
+            <div class='metric-label'>{t['difference']}</div>
+            <div class='metric-sublabel'>{t['surplus'] if toplam_cek - toplam_fatura >= 0 else t['deficit']}</div>
         </div>
         <div class='metric-block'>
             <div class='metric-value' style='color: #fd7e14;'>{genel_ort_valor:.1f}</div>
-            <div class='metric-label'>Ort. Valör Vadesi</div>
-            <div class='metric-sublabel'>gün</div>
+            <div class='metric-label'>{t['avg_value_maturity']}</div>
+            <div class='metric-sublabel'>{t['days']}</div>
         </div>
         <div class='metric-block'>
             <div class='metric-value' style='color: #6f42c1;'>{genel_ort_cek:.1f}</div>
-            <div class='metric-label'>Ort. Çek Vadesi</div>
-            <div class='metric-sublabel'>gün</div>
+            <div class='metric-label'>{t['avg_check_maturity']}</div>
+            <div class='metric-sublabel'>{t['days']}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     st.divider()
     
-    # 📊 GRAFİK GÖRSELLEŞTİRMELER
-    st.markdown("## 📊 Grafik Analizler")
+    # 📊 CHART VISUALIZATIONS
+    st.markdown(f"## {t['chart_analysis']}")
     
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Vade Dağılımı", "🎯 Karşılaştırma", "📅 Zaman Çizelgesi", "💹 Detaylı Analiz"])
+    tab1, tab2, tab3, tab4 = st.tabs([t['maturity_distribution'], t['comparison'], t['timeline'], t['detailed_analysis']])
     
     with tab1:
-        st.markdown("### 📈 Vade Dağılımı Grafikleri")
+        st.markdown(f"### {t['maturity_distribution']}")
         
-        # İki ayrı grafik: Fatura ve Çek
-        st.markdown("#### 📝 Fatura Vade Dağılımı (Valör Bazlı)")
+        # Two separate charts: Invoice and Check
+        st.markdown(f"#### {t['invoice_maturity_dist']}")
         graph_col1a, graph_col2a = st.columns(2)
         
         with graph_col1a:
-            # Bar Chart - Fatura Vade Gruplarına Göre Tutar Dağılımı
+            # Bar Chart - Invoice Amount Distribution by Maturity Groups
+            # Get column names dynamically
+            amount_col = 'Tutar (₺)' if lang == 'TR' else 'Amount ($)'
+            group_col = 'Vade Grubu' if lang == 'TR' else 'Maturity Group'
+            
             fig_bar_fatura = px.bar(
                 df_fatura_vade_dagilim,
-                x='Vade Grubu',
-                y='Tutar (₺)',
-                text='Tutar (₺)',
-                title='Fatura Vade Gruplarına Göre Tutar',
-                color='Tutar (₺)',
+                x=group_col,
+                y=amount_col,
+                text=amount_col,
+                title=t['invoice_amount_by_groups'],
+                color=amount_col,
                 color_continuous_scale='Blues'
             )
-            fig_bar_fatura.update_traces(texttemplate='₺%{text:,.0f}', textposition='outside')
+            fig_bar_fatura.update_traces(texttemplate=f"{t['currency']}%{{text:,.0f}}", textposition='outside')
             fig_bar_fatura.update_layout(
-                xaxis_title="Vade Grubu",
-                yaxis_title="Tutar (₺)",
+                xaxis_title=t['maturity_group'],
+                yaxis_title=f"{t['amount']} ({t['currency']})",
                 showlegend=False,
                 height=400
             )
             st.plotly_chart(fig_bar_fatura, use_container_width=True)
         
         with graph_col2a:
-            # Pie Chart - Fatura Yüzde Dağılımı
+            # Pie Chart - Invoice Percentage Distribution
+            amount_col = 'Tutar (₺)' if lang == 'TR' else 'Amount ($)'
+            group_col = 'Vade Grubu' if lang == 'TR' else 'Maturity Group'
+            
             fig_pie_fatura = px.pie(
-                df_fatura_vade_dagilim[df_fatura_vade_dagilim['Tutar (₺)'] > 0],
-                values='Tutar (₺)',
-                names='Vade Grubu',
-                title='Fatura Vade Oranları',
+                df_fatura_vade_dagilim[df_fatura_vade_dagilim[amount_col] > 0],
+                values=amount_col,
+                names=group_col,
+                title=t['invoice_maturity_ratios'],
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.Blues_r
             )
@@ -815,36 +1161,39 @@ if st.session_state.faturalar and st.session_state.cekler:
             st.plotly_chart(fig_pie_fatura, use_container_width=True)
         
         st.divider()
-        st.markdown("#### 💳 Çek Vade Dağılımı")
+        st.markdown(f"#### {t['check_maturity_dist']}")
         graph_col1b, graph_col2b = st.columns(2)
         
         with graph_col1b:
-            # Bar Chart - Çek Vade Gruplarına Göre Tutar Dağılımı
+            # Bar Chart - Check Amount Distribution by Maturity Groups
+            amount_col = 'Tutar (₺)' if lang == 'TR' else 'Amount ($)'
+            group_col = 'Vade Grubu' if lang == 'TR' else 'Maturity Group'
+            
             fig_bar_cek = px.bar(
                 df_cek_vade_dagilim,
-                x='Vade Grubu',
-                y='Tutar (₺)',
-                text='Tutar (₺)',
-                title='Çek Vade Gruplarına Göre Tutar',
-                color='Tutar (₺)',
+                x=group_col,
+                y=amount_col,
+                text=amount_col,
+                title=t['check_amount_by_groups'],
+                color=amount_col,
                 color_continuous_scale='Greens'
             )
-            fig_bar_cek.update_traces(texttemplate='₺%{text:,.0f}', textposition='outside')
+            fig_bar_cek.update_traces(texttemplate=f"{t['currency']}%{{text:,.0f}}", textposition='outside')
             fig_bar_cek.update_layout(
-                xaxis_title="Vade Grubu",
-                yaxis_title="Tutar (₺)",
+                xaxis_title=t['maturity_group'],
+                yaxis_title=f"{t['amount']} ({t['currency']})",
                 showlegend=False,
                 height=400
             )
             st.plotly_chart(fig_bar_cek, use_container_width=True)
         
         with graph_col2b:
-            # Pie Chart - Çek Yüzde Dağılımı
+            # Pie Chart - Check Percentage Distribution
             fig_pie_cek = px.pie(
-                df_cek_vade_dagilim[df_cek_vade_dagilim['Tutar (₺)'] > 0],
-                values='Tutar (₺)',
-                names='Vade Grubu',
-                title='Çek Vade Oranları',
+                df_cek_vade_dagilim[df_cek_vade_dagilim[amount_col] > 0],
+                values=amount_col,
+                names=group_col,
+                title=t['check_maturity_ratios'],
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.Greens_r
             )
@@ -853,53 +1202,53 @@ if st.session_state.faturalar and st.session_state.cekler:
             st.plotly_chart(fig_pie_cek, use_container_width=True)
     
     with tab2:
-        st.markdown("### 🎯 Fatura vs Çek Karşılaştırması")
+        st.markdown(f"### {t['invoice_vs_check']}")
         
-        # Fatura ve Çek tutarlarını karşılaştır
+        # Compare invoice and check amounts
         comparison_data = pd.DataFrame({
-            'Kategori': ['Fatura', 'Çek'],
-            'Toplam Tutar': [toplam_fatura, toplam_cek],
-            'Adet': [len(df_faturalar_filtered), len(df_cekler_filtered)],
-            'Ortalama': [toplam_fatura/len(df_faturalar_filtered) if len(df_faturalar_filtered) > 0 else 0,
+            t['category']: [t['invoice'], t['check']],
+            t['total_amount']: [toplam_fatura, toplam_cek],
+            t['count']: [len(df_faturalar_filtered), len(df_cekler_filtered)],
+            t['average']: [toplam_fatura/len(df_faturalar_filtered) if len(df_faturalar_filtered) > 0 else 0,
                         toplam_cek/len(df_cekler_filtered) if len(df_cekler_filtered) > 0 else 0]
         })
         
         comp_col1, comp_col2 = st.columns(2)
         
         with comp_col1:
-            # Tutar karşılaştırma
+            # Amount comparison
             fig_comp1 = go.Figure(data=[
-                go.Bar(name='Toplam Tutar', x=comparison_data['Kategori'], y=comparison_data['Toplam Tutar'],
-                       text=comparison_data['Toplam Tutar'].apply(lambda x: f'₺{x:,.0f}'),
+                go.Bar(name=t['total_amount'], x=comparison_data[t['category']], y=comparison_data[t['total_amount']],
+                       text=comparison_data[t['total_amount']].apply(lambda x: f"{t['currency']}{x:,.0f}"),
                        textposition='outside',
                        marker_color=['#0d6efd', '#198754'])
             ])
             fig_comp1.update_layout(
-                title='Toplam Tutar Karşılaştırması',
+                title=t['amount_comparison'],
                 xaxis_title='',
-                yaxis_title='Tutar (₺)',
+                yaxis_title=f"{t['amount']} ({t['currency']})",
                 height=400
             )
             st.plotly_chart(fig_comp1, use_container_width=True)
         
         with comp_col2:
-            # Adet ve ortalama karşılaştırma
+            # Count and average comparison
             fig_comp2 = make_subplots(
                 rows=1, cols=2,
-                subplot_titles=('Adet', 'Ortalama Tutar'),
+                subplot_titles=(t['count'], t['average_amount']),
                 specs=[[{"type": "bar"}, {"type": "bar"}]]
             )
             
             fig_comp2.add_trace(
-                go.Bar(x=comparison_data['Kategori'], y=comparison_data['Adet'],
-                       text=comparison_data['Adet'], textposition='outside',
+                go.Bar(x=comparison_data[t['category']], y=comparison_data[t['count']],
+                       text=comparison_data[t['count']], textposition='outside',
                        marker_color=['#0d6efd', '#198754'], showlegend=False),
                 row=1, col=1
             )
             
             fig_comp2.add_trace(
-                go.Bar(x=comparison_data['Kategori'], y=comparison_data['Ortalama'],
-                       text=comparison_data['Ortalama'].apply(lambda x: f'₺{x:,.0f}'),
+                go.Bar(x=comparison_data[t['category']], y=comparison_data[t['average']],
+                       text=comparison_data[t['average']].apply(lambda x: f"{t['currency']}{x:,.0f}"),
                        textposition='outside',
                        marker_color=['#0d6efd', '#198754'], showlegend=False),
                 row=1, col=2
@@ -908,53 +1257,53 @@ if st.session_state.faturalar and st.session_state.cekler:
             fig_comp2.update_layout(height=400, showlegend=False)
             st.plotly_chart(fig_comp2, use_container_width=True)
         
-        # Vade karşılaştırma
-        st.markdown("#### 📊 Ortalama Vade Karşılaştırması")
+        # Maturity comparison
+        st.markdown(f"#### {t['avg_maturity_comparison']}")
         vade_comp_data = pd.DataFrame({
-            'Vade Tipi': ['Valör Vadesi', 'Çek Vadesi'],
-            'Ortalama Gün': [genel_ort_valor, genel_ort_cek]
+            t['maturity_type']: [t['value_maturity'], t['check_maturity']],
+            t['average_days']: [genel_ort_valor, genel_ort_cek]
         })
         
         fig_vade = px.bar(
             vade_comp_data,
-            x='Vade Tipi',
-            y='Ortalama Gün',
-            text='Ortalama Gün',
-            title='Ortalama Vade Karşılaştırması (Gün)',
-            color='Vade Tipi',
-            color_discrete_map={'Valör Vadesi': '#fd7e14', 'Çek Vadesi': '#6f42c1'}
+            x=t['maturity_type'],
+            y=t['average_days'],
+            text=t['average_days'],
+            title=f"{t['avg_maturity_comparison']} ({t['days']})",
+            color=t['maturity_type'],
+            color_discrete_map={t['value_maturity']: '#fd7e14', t['check_maturity']: '#6f42c1'}
         )
-        fig_vade.update_traces(texttemplate='%{text:.1f} gün', textposition='outside')
+        fig_vade.update_traces(texttemplate=f'%{{text:.1f}} {t["days"]}', textposition='outside')
         fig_vade.update_layout(showlegend=False, height=400)
         st.plotly_chart(fig_vade, use_container_width=True)
     
     with tab3:
-        st.markdown("### 📅 Vade Zaman Çizelgesi")
+        st.markdown(f"### {t['maturity_timeline']}")
         
-        # Timeline grafiği için veri hazırlama
+        # Prepare data for timeline chart
         timeline_data = []
         
-        # Faturaları ekle
+        # Add invoices
         for _, fatura in df_faturalar_filtered.iterrows():
             timeline_data.append({
-                'Tip': 'Fatura',
+                t['type']: t['invoice'],
                 'No': fatura['Fatura No'],
-                'Başlangıç': fatura['Fatura Tarihi Raw'],
-                'Bitiş': fatura['Valör Tarihi Raw'],
-                'Tutar': fatura['Tutar'],
-                'Açıklama': f"{fatura['Fatura No']} - ₺{fatura['Tutar']:,.0f}"
+                'Start': fatura['Fatura Tarihi Raw'],
+                'End': fatura['Valör Tarihi Raw'],
+                t['amount']: fatura['Tutar'],
+                'Description': f"{fatura['Fatura No']} - {t['currency']}{fatura['Tutar']:,.0f}"
             })
         
-        # Çekleri ekle
+        # Add checks
         if ilk_fatura_tarihi:
             for _, cek in df_cekler_filtered.iterrows():
                 timeline_data.append({
-                    'Tip': 'Çek',
+                    t['type']: t['check'],
                     'No': cek['Çek No'],
-                    'Başlangıç': ilk_fatura_tarihi,
-                    'Bitiş': cek['Vade Tarihi Raw'],
-                    'Tutar': cek['Tutar'],
-                    'Açıklama': f"{cek['Çek No']} - ₺{cek['Tutar']:,.0f}"
+                    'Start': ilk_fatura_tarihi,
+                    'End': cek['Vade Tarihi Raw'],
+                    t['amount']: cek['Tutar'],
+                    'Description': f"{cek['Çek No']} - {t['currency']}{cek['Tutar']:,.0f}"
                 })
         
         df_timeline = pd.DataFrame(timeline_data)
@@ -962,29 +1311,29 @@ if st.session_state.faturalar and st.session_state.cekler:
         if not df_timeline.empty:
             fig_timeline = px.timeline(
                 df_timeline,
-                x_start='Başlangıç',
-                x_end='Bitiş',
-                y='Açıklama',
-                color='Tip',
-                title='Fatura ve Çek Vade Zaman Çizelgesi',
-                color_discrete_map={'Fatura': '#0d6efd', 'Çek': '#198754'},
-                hover_data=['Tutar']
+                x_start='Start',
+                x_end='End',
+                y='Description',
+                color=t['type'],
+                title=t['invoice_check_timeline'],
+                color_discrete_map={t['invoice']: '#0d6efd', t['check']: '#198754'},
+                hover_data=[t['amount']]
             )
             fig_timeline.update_layout(
-                xaxis_title='Tarih',
+                xaxis_title=t['date'],
                 yaxis_title='',
                 height=max(400, len(df_timeline) * 30)
             )
             st.plotly_chart(fig_timeline, use_container_width=True)
         
-        # Vade dağılım grafiği - Scatter
-        st.markdown("#### 📊 Vade-Tutar İlişkisi")
+        # Maturity distribution chart - Scatter
+        st.markdown(f"#### {t['maturity_amount_relation']}")
         scatter_data = []
         for _, fatura in df_faturalar_filtered.iterrows():
             scatter_data.append({
-                'Vade (Gün)': fatura['Vade (Gün)'],
-                'Tutar': fatura['Tutar'],
-                'Tip': 'Fatura',
+                t['maturity_days']: fatura['Vade (Gün)'],
+                t['amount']: fatura['Tutar'],
+                t['type']: t['invoice'],
                 'No': fatura['Fatura No']
             })
         
@@ -992,48 +1341,48 @@ if st.session_state.faturalar and st.session_state.cekler:
         
         fig_scatter = px.scatter(
             df_scatter,
-            x='Vade (Gün)',
-            y='Tutar',
-            size='Tutar',
-            color='Tip',
+            x=t['maturity_days'],
+            y=t['amount'],
+            size=t['amount'],
+            color=t['type'],
             hover_data=['No'],
-            title='Vade Süresine Göre Fatura Tutarları',
-            color_discrete_map={'Fatura': '#0d6efd'}
+            title=t['invoice_by_maturity'],
+            color_discrete_map={t['invoice']: '#0d6efd'}
         )
         fig_scatter.update_layout(height=400)
         st.plotly_chart(fig_scatter, use_container_width=True)
     
     with tab4:
-        st.markdown("### 💹 Detaylı İstatistiksel Analiz")
+        st.markdown(f"### {t['detailed_stats']}")
         
         detail_col1, detail_col2, detail_col3 = st.columns(3)
         
         with detail_col1:
-            st.markdown("#### 📋 Fatura İstatistikleri")
-            st.metric("Toplam Fatura Sayısı", len(df_faturalar_filtered))
-            st.metric("Toplam Tutar", f"₺{toplam_fatura:,.0f}")
-            st.metric("Ortalama Tutar", f"₺{toplam_fatura/len(df_faturalar_filtered):,.0f}" if len(df_faturalar_filtered) > 0 else "₺0")
-            st.metric("Medyan Tutar", f"₺{df_faturalar_filtered['Tutar'].median():,.0f}" if not df_faturalar_filtered.empty else "₺0")
-            st.metric("Std Sapma", f"₺{df_faturalar_filtered['Tutar'].std():,.0f}" if not df_faturalar_filtered.empty else "₺0")
+            st.markdown(f"#### {t['invoice_stats']}")
+            st.metric(t['total_invoice_count'], len(df_faturalar_filtered))
+            st.metric(t['total_amount'], f"{t['currency']}{toplam_fatura:,.0f}")
+            st.metric(t['average_amount'], f"{t['currency']}{toplam_fatura/len(df_faturalar_filtered):,.0f}" if len(df_faturalar_filtered) > 0 else f"{t['currency']}0")
+            st.metric(t['median_amount'], f"{t['currency']}{df_faturalar_filtered['Tutar'].median():,.0f}" if not df_faturalar_filtered.empty else f"{t['currency']}0")
+            st.metric(t['std_deviation'], f"{t['currency']}{df_faturalar_filtered['Tutar'].std():,.0f}" if not df_faturalar_filtered.empty else f"{t['currency']}0")
         
         with detail_col2:
-            st.markdown("#### 💳 Çek İstatistikleri")
-            st.metric("Toplam Çek Sayısı", len(df_cekler_filtered))
-            st.metric("Toplam Tutar", f"₺{toplam_cek:,.0f}")
-            st.metric("Ortalama Tutar", f"₺{toplam_cek/len(df_cekler_filtered):,.0f}" if len(df_cekler_filtered) > 0 else "₺0")
-            st.metric("Medyan Tutar", f"₺{df_cekler_filtered['Tutar'].median():,.0f}" if not df_cekler_filtered.empty else "₺0")
-            st.metric("Std Sapma", f"₺{df_cekler_filtered['Tutar'].std():,.0f}" if not df_cekler_filtered.empty else "₺0")
+            st.markdown(f"#### {t['check_stats']}")
+            st.metric(t['total_check_count'], len(df_cekler_filtered))
+            st.metric(t['total_amount'], f"{t['currency']}{toplam_cek:,.0f}")
+            st.metric(t['average_amount'], f"{t['currency']}{toplam_cek/len(df_cekler_filtered):,.0f}" if len(df_cekler_filtered) > 0 else f"{t['currency']}0")
+            st.metric(t['median_amount'], f"{t['currency']}{df_cekler_filtered['Tutar'].median():,.0f}" if not df_cekler_filtered.empty else f"{t['currency']}0")
+            st.metric(t['std_deviation'], f"{t['currency']}{df_cekler_filtered['Tutar'].std():,.0f}" if not df_cekler_filtered.empty else f"{t['currency']}0")
         
         with detail_col3:
-            st.markdown("#### 📊 Vade İstatistikleri")
-            st.metric("Ort. Valör Vadesi", f"{genel_ort_valor:.1f} gün")
-            st.metric("Ort. Çek Vadesi", f"{genel_ort_cek:.1f} gün")
-            st.metric("Min Vade", f"{min(tum_valor_vadeler) if tum_valor_vadeler else 0} gün")
-            st.metric("Max Vade", f"{max(tum_valor_vadeler) if tum_valor_vadeler else 0} gün")
-            st.metric("Vade Std Sapma", f"{np.std(tum_valor_vadeler):.1f} gün" if tum_valor_vadeler else "0 gün")
+            st.markdown(f"#### {t['maturity_stats']}")
+            st.metric(t['avg_value_maturity'], f"{genel_ort_valor:.1f} {t['days']}")
+            st.metric(t['avg_check_maturity'], f"{genel_ort_cek:.1f} {t['days']}")
+            st.metric(t['min_maturity'], f"{min(tum_valor_vadeler) if tum_valor_vadeler else 0} {t['days']}")
+            st.metric(t['max_maturity'], f"{max(tum_valor_vadeler) if tum_valor_vadeler else 0} {t['days']}")
+            st.metric(t['maturity_std_dev'], f"{np.std(tum_valor_vadeler):.1f} {t['days']}" if tum_valor_vadeler else f"0 {t['days']}")
         
-        # Histogram - Tutar dağılımı
-        st.markdown("#### 📊 Tutar Dağılım Histogramı")
+        # Histogram - Amount distribution
+        st.markdown(f"#### {t['amount_dist_histogram']}")
         
         hist_col1, hist_col2 = st.columns(2)
         
@@ -1042,12 +1391,12 @@ if st.session_state.faturalar and st.session_state.cekler:
                 df_faturalar_filtered,
                 x='Tutar',
                 nbins=10,
-                title='Fatura Tutar Dağılımı',
+                title=t['invoice_amount_dist'],
                 color_discrete_sequence=['#0d6efd']
             )
             fig_hist_fatura.update_layout(
-                xaxis_title='Tutar (₺)',
-                yaxis_title='Frekans',
+                xaxis_title=f"{t['amount']} ({t['currency']})",
+                yaxis_title=t['frequency'],
                 height=350
             )
             st.plotly_chart(fig_hist_fatura, use_container_width=True)
@@ -1057,27 +1406,27 @@ if st.session_state.faturalar and st.session_state.cekler:
                 df_faturalar_filtered,
                 x='Vade (Gün)',
                 nbins=10,
-                title='Vade Süresi Dağılımı',
+                title=t['maturity_period_dist'],
                 color_discrete_sequence=['#fd7e14']
             )
             fig_hist_vade.update_layout(
-                xaxis_title='Vade (Gün)',
-                yaxis_title='Frekans',
+                xaxis_title=t['maturity_days'],
+                yaxis_title=t['frequency'],
                 height=350
             )
             st.plotly_chart(fig_hist_vade, use_container_width=True)
     
     st.divider()
     
-    # Genel Vade Analizi
-    st.markdown("### 📊 Genel Vade Analizi")
+    # General Maturity Analysis
+    st.markdown(f"### {t['general_maturity_analysis']}")
     
-    # İnteraktif veri tablosu
-    with st.expander("📋 Detaylı Hesaplama Tablosu", expanded=False):
+    # Interactive data table
+    with st.expander(t['detailed_calc_table'], expanded=False):
         st.dataframe(
             df_hesap.style.format({
-                'Fatura Tutar': '₺{:,.2f}',
-                'Çek Tutar': '₺{:,.2f}',
+                'Fatura Tutar': '${:,.2f}',
+                'Çek Tutar': '${:,.2f}',
                 'Vade (Gün) - Valör': '{:.0f}',
                 'Vade (Gün) - Çek': '{:.0f}',
                 'Vade Farkı': '{:.0f}'
@@ -1086,41 +1435,43 @@ if st.session_state.faturalar and st.session_state.cekler:
             height=400
         )
     
-    # Vade dağılımı analizi - zaten yukarda hesaplandı, burada sadece göster
+    # Maturity distribution analysis - already calculated above, just display here
     col_analiz1, col_analiz2 = st.columns([1, 1])
     
     with col_analiz1:
-        st.markdown("#### 📈 Fatura Vade Dağılımı (Valör Bazlı)")
-        # df_fatura_vade_dagilim zaten yukarıda hesaplandı, formatla ve göster
+        st.markdown(f"#### {t['invoice_maturity_dist']}")
+        # df_fatura_vade_dagilim already calculated above, format and display
         dagilim_display = df_fatura_vade_dagilim.copy()
-        dagilim_display['Tutar (₺)'] = dagilim_display['Tutar (₺)'].apply(lambda x: f"₺{x:,.0f}")
-        dagilim_display['Oran (%)'] = dagilim_display['Oran (%)'].apply(lambda x: f"{x:.1f}%")
+        amount_col = 'Tutar (₺)' if lang == 'TR' else 'Amount ($)'
+        ratio_col = 'Oran (%)' if lang == 'TR' else 'Ratio (%)'
+        dagilim_display[amount_col] = dagilim_display[amount_col].apply(lambda x: f"{t['currency']}{x:,.0f}")
+        dagilim_display[ratio_col] = dagilim_display[ratio_col].apply(lambda x: f"{x:.1f}%")
         st.dataframe(dagilim_display, use_container_width=True, hide_index=True)
     
     with col_analiz2:
-        # Min-Max vadeler
+        # Min-Max maturities
         min_vade, max_vade, min_tutar, max_tutar = calculations.min_max_vade_hesapla(tum_fatura_tutarlar, tum_valor_vadeler)
         
-        st.markdown("#### 📊 Vade İstatistikleri")
+        st.markdown(f"#### {t['maturity_stats']}")
         stat_col1, stat_col2 = st.columns(2)
         with stat_col1:
-            st.metric("En Kısa Vade", f"{min_vade} gün", f"₺{min_tutar:,.0f}")
-            st.metric("Ortalama Vade", f"{genel_ort_valor:.1f} gün")
+            st.metric(t['shortest_maturity'], f"{min_vade} {t['days']}", f"{t['currency']}{min_tutar:,.0f}")
+            st.metric(t['average_maturity'], f"{genel_ort_valor:.1f} {t['days']}")
         with stat_col2:
-            st.metric("En Uzun Vade", f"{max_vade} gün", f"₺{max_tutar:,.0f}")
+            st.metric(t['longest_maturity'], f"{max_vade} {t['days']}", f"{t['currency']}{max_tutar:,.0f}")
             std_vade = np.std(tum_valor_vadeler) if tum_valor_vadeler else 0
-            st.metric("Standart Sapma", f"{std_vade:.1f} gün")
+            st.metric(t['standard_deviation'], f"{std_vade:.1f} {t['days']}")
     
     st.divider()
     
-    # Çek bazlı ortalama vadeler
-    st.markdown("### 💳 Çek Bazlı Vade Analizi")
+    # Check-based average maturities
+    st.markdown(f"### {t['check_based_analysis']}")
     
     for idx, cek_no in enumerate(df_cekler_filtered['Çek No']):
         with st.expander(f"💳 {cek_no}", expanded=(idx == 0)):
             cek_data = df_hesap[df_hesap['Çek No'] == cek_no]
             
-            # Bu çek için ağırlıklı ortalama
+            # Weighted average for this check
             tutarlar = cek_data['Fatura Tutar'].tolist()
             vadeler_valor = cek_data['Vade (Gün) - Valör'].tolist()
             vadeler_cek = cek_data['Vade (Gün) - Çek'].tolist()
@@ -1128,16 +1479,16 @@ if st.session_state.faturalar and st.session_state.cekler:
             ort_valor = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_valor)
             ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tutarlar, vadeler_cek)
             
-            # Büyük metrikler
+            # Large metrics
             vade_col1, vade_col2 = st.columns(2)
             with vade_col1:
-                st.markdown("<h4 style='text-align: center;'>📅 Ort. Valör Vadesi</h4>", unsafe_allow_html=True)
-                st.markdown(f"<h1 style='text-align: center; color: #fd7e14;'>{ort_valor:.1f} gün</h1>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='text-align: center;'>{t['avg_value_mat']}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h1 style='text-align: center; color: #fd7e14;'>{ort_valor:.1f} {t['days']}</h1>", unsafe_allow_html=True)
             with vade_col2:
-                st.markdown("<h4 style='text-align: center;'>📝 Ort. Çek Vadesi</h4>", unsafe_allow_html=True)
-                st.markdown(f"<h1 style='text-align: center; color: #6f42c1;'>{ort_cek:.1f} gün</h1>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='text-align: center;'>{t['avg_check_mat']}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h1 style='text-align: center; color: #6f42c1;'>{ort_cek:.1f} {t['days']}</h1>", unsafe_allow_html=True)
             
-            # Detaylı istatistikler
+            # Detailed statistics
             detay_col1, detay_col2 = st.columns(2)
             with detay_col1:
                 cek_vadeler_valor = cek_data['Vade (Gün) - Valör'].tolist()
@@ -1145,10 +1496,10 @@ if st.session_state.faturalar and st.session_state.cekler:
                 max_v_valor = max(cek_vadeler_valor) if cek_vadeler_valor else 0
                 std_v_valor = np.std(cek_vadeler_valor) if len(cek_vadeler_valor) > 1 else 0
                 
-                st.markdown("**Valör Vade İstatistikleri:**")
-                st.write(f"• Min: {min_v_valor} gün")
-                st.write(f"• Max: {max_v_valor} gün")
-                st.write(f"• Std: {std_v_valor:.1f} gün")
+                st.markdown(t['value_mat_stats'])
+                st.write(f"• {t['min']}: {min_v_valor} {t['days']}")
+                st.write(f"• {t['max']}: {max_v_valor} {t['days']}")
+                st.write(f"• {t['std']}: {std_v_valor:.1f} {t['days']}")
             
             with detay_col2:
                 cek_vadeler_cek = cek_data['Vade (Gün) - Çek'].tolist()
@@ -1156,27 +1507,27 @@ if st.session_state.faturalar and st.session_state.cekler:
                 max_v_cek = max(cek_vadeler_cek) if cek_vadeler_cek else 0
                 std_v_cek = np.std(cek_vadeler_cek) if len(cek_vadeler_cek) > 1 else 0
                 
-                st.markdown("**Çek Vade İstatistikleri:**")
-                st.write(f"• Min: {min_v_cek} gün")
-                st.write(f"• Max: {max_v_cek} gün")
-                st.write(f"• Std: {std_v_cek:.1f} gün")
+                st.markdown(t['check_mat_stats'])
+                st.write(f"• {t['min']}: {min_v_cek} {t['days']}")
+                st.write(f"• {t['max']}: {max_v_cek} {t['days']}")
+                st.write(f"• {t['std']}: {std_v_cek:.1f} {t['days']}")
             
             st.markdown("---")
-            st.markdown("**📋 İlgili Faturalar:**")
+            st.markdown(t['related_invoices'])
             for _, row in cek_data.iterrows():
-                st.markdown(f"• **{row['Fatura No']}**: ₺{row['Fatura Tutar']:,.0f} → Valör: **{row['Vade (Gün) - Valör']} gün**, Çek: **{row['Vade (Gün) - Çek']} gün**")
+                st.markdown(f"• **{row['Fatura No']}**: {t['currency']}{row['Fatura Tutar']:,.0f} → {t['value_maturity']}: **{row['Vade (Gün) - Valör']} {t['days']}**, {t['check_maturity']}: **{row['Vade (Gün) - Çek']} {t['days']}**")
 
 elif st.session_state.faturalar and not st.session_state.cekler:
-    st.warning("⚠️ Lütfen en az bir çek ekleyin!")
+    st.warning(t['no_checks_warning'])
 elif not st.session_state.faturalar and st.session_state.cekler:
-    st.warning("⚠️ Lütfen en az bir fatura ekleyin!")
+    st.warning(t['no_invoices_warning'])
 else:
-    st.info("📝 Fatura ve çek ekleyerek hesaplama yapın.")
+    st.info(t['add_data_info'])
 
 # Footer
 st.divider()
-st.markdown("""
+st.markdown(f"""
 <div style='text-align: center; color: gray; padding: 20px;'>
-<small>© 2025 Ortalama Vade Hesaplama Programı | By Goksel</small>
+<small>{t['footer']}</small>
 </div>
 """, unsafe_allow_html=True)
