@@ -54,11 +54,11 @@ def to_excel_bytes(df_dict):
                 worksheet.set_column(idx, idx, max_length)
                 
                 # Para birimi sütunları için format
-                if 'Tutar' in col or 'Fark' in col or 'Toplam' in col:
+                if 'Tutar' in col or 'Toplam' in col:
                     for row_num in range(1, len(df) + 1):
                         worksheet.write(row_num, idx, df.iloc[row_num-1][col], currency_format)
-                # Sayı sütunları için format
-                elif 'Gün' in col or 'Vade' in col or 'Adet' in col:
+                # Sayı sütunları için format (Vade Farkı dahil)
+                elif 'Gün' in col or 'Vade' in col or 'Adet' in col or 'Fark' in col:
                     for row_num in range(1, len(df) + 1):
                         worksheet.write(row_num, idx, df.iloc[row_num-1][col], number_format)
     
@@ -86,6 +86,77 @@ if 'filter_min_vade' not in st.session_state:
     st.session_state.filter_min_vade = 0
 if 'filter_max_vade' not in st.session_state:
     st.session_state.filter_max_vade = 365
+
+# --- MONETARY PARSING FONKSIYONLARI ---
+def parse_amount(val):
+    """
+    Monetary format parser supporting both Turkish (1.000.000,00) and English (1,000,000.00) formats.
+    Intelligently detects which separator is the decimal point.
+    """
+    if val is None or val == '':
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    
+    val_str = str(val).strip()
+    # Remove currency symbols
+    for symbol in ['₺', '$', '€', '£', 'TL', 'USD', 'EUR', 'GBP']:
+        val_str = val_str.replace(symbol, '')
+    val_str = val_str.strip()
+    
+    if not val_str or val_str == '-':
+        return 0.0
+    
+    # Count separators
+    dot_count = val_str.count('.')
+    comma_count = val_str.count(',')
+    
+    # Find last separator positions
+    last_dot = val_str.rfind('.')
+    last_comma = val_str.rfind(',')
+    
+    # Determine format based on separator positions and counts
+    if dot_count == 0 and comma_count == 0:
+        # No separators - plain number
+        return float(val_str)
+    elif dot_count > 0 and comma_count == 0:
+        # Only dots
+        if dot_count == 1 and last_dot > len(val_str) - 4:
+            # Single dot in last 3 positions: decimal point (e.g., "100.50")
+            return float(val_str)
+        else:
+            # Multiple dots or dot not in decimal position: thousand separator (e.g., "1.000.000")
+            return float(val_str.replace('.', ''))
+    elif comma_count > 0 and dot_count == 0:
+        # Only commas
+        if comma_count == 1 and last_comma > len(val_str) - 4:
+            # Single comma in last 3 positions: decimal point (e.g., "100,50")
+            return float(val_str.replace(',', '.'))
+        else:
+            # Multiple commas: thousand separator (e.g., "1,000,000")
+            return float(val_str.replace(',', ''))
+    else:
+        # Both separators present
+        if last_comma > last_dot:
+            # Comma comes last: Turkish format (1.000.000,00)
+            # Remove dots (thousand), replace comma with dot (decimal)
+            cleaned = val_str.replace('.', '').replace(',', '.')
+            return float(cleaned)
+        else:
+            # Dot comes last: English format (1,000,000.00)
+            # Remove commas (thousand), keep dot (decimal)
+            cleaned = val_str.replace(',', '')
+            return float(cleaned)
+
+def sanitize_records(records):
+    """Clean monetary amounts in record lists before calculations."""
+    cleaned = []
+    for rec in records:
+        rec_copy = rec.copy()
+        if 'Tutar' in rec_copy:
+            rec_copy['Tutar'] = parse_amount(rec_copy['Tutar'])
+        cleaned.append(rec_copy)
+    return cleaned
 
 # Başlık ve geçmiş butonu
 title_col1, title_col2 = st.columns([4, 1])
@@ -465,8 +536,12 @@ if st.session_state.faturalar and st.session_state.cekler:
                 st.success("✅ Filtre uygulandı!")
                 st.rerun()
     
-    df_faturalar = pd.DataFrame(st.session_state.faturalar)
-    df_cekler = pd.DataFrame(st.session_state.cekler)
+    # Sanitize monetary amounts before creating DataFrames
+    faturalar_clean = sanitize_records(st.session_state.faturalar)
+    cekler_clean = sanitize_records(st.session_state.cekler)
+    
+    df_faturalar = pd.DataFrame(faturalar_clean)
+    df_cekler = pd.DataFrame(cekler_clean)
     
     # Filtreleme uygula
     df_faturalar_filtered = df_faturalar[
@@ -563,9 +638,9 @@ if st.session_state.faturalar and st.session_state.cekler:
     
     genel_ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_vade_gunler)
     
-    # Vade dağılım analizi
+    # Vade dağılım analizi - FATURALAR (Valör bazlı)
     vade_gruplari = calculations.vade_analizi(tum_fatura_tutarlar, tum_valor_vadeler)
-    df_vade_dagilim = pd.DataFrame([
+    df_fatura_vade_dagilim = pd.DataFrame([
         {
             "Vade Grubu": grup,
             "Tutar (₺)": data['tutar'],
@@ -574,6 +649,18 @@ if st.session_state.faturalar and st.session_state.cekler:
         }
         for grup, data in vade_gruplari.items()
     ])
+    
+    # Vade dağılım analizi - ÇEKLER
+    cek_vade_gruplari = calculations.vade_analizi(tum_cek_tutarlar, tum_cek_vade_gunler)
+    df_cek_vade_dagilim = pd.DataFrame([
+        {
+            "Vade Grubu": grup,
+            "Tutar (₺)": data['tutar'],
+            "Adet": data['adet'],
+            "Oran (%)": data['oran']
+        }
+        for grup, data in cek_vade_gruplari.items()
+    ])
 
     # Excel indirme butonu - GELİŞMİŞ
     excel_data = {
@@ -581,7 +668,8 @@ if st.session_state.faturalar and st.session_state.cekler:
         "Hesaplama Detayı": df_hesap,
         "Faturalar": df_faturalar_detay,
         "Çekler": df_cekler_detay,
-        "Vade Dağılımı": df_vade_dagilim
+        "Fatura Vade Dağılımı": df_fatura_vade_dagilim,
+        "Çek Vade Dağılımı": df_cek_vade_dagilim
     }
     excel_bytes = to_excel_bytes(excel_data)
     
@@ -595,7 +683,7 @@ if st.session_state.faturalar and st.session_state.cekler:
         use_container_width=True,
         type="primary"
     )
-    st.caption("💡 Excel dosyası 5 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler ve Vade Dağılımı")
+    st.caption("💡 Excel dosyası 6 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler, Fatura Vade Dağılımı ve Çek Vade Dağılımı")
 
     # GENİŞ METRİK BARI
     st.markdown(f"""
@@ -686,46 +774,83 @@ if st.session_state.faturalar and st.session_state.cekler:
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Vade Dağılımı", "🎯 Karşılaştırma", "📅 Zaman Çizelgesi", "💹 Detaylı Analiz"])
     
     with tab1:
-        st.markdown("### 📈 Vade Dağılımı Grafiği")
+        st.markdown("### 📈 Vade Dağılımı Grafikleri")
         
-        graph_col1, graph_col2 = st.columns(2)
+        # İki ayrı grafik: Fatura ve Çek
+        st.markdown("#### 📝 Fatura Vade Dağılımı (Valör Bazlı)")
+        graph_col1a, graph_col2a = st.columns(2)
         
-        with graph_col1:
-            # Bar Chart - Vade Gruplarına Göre Tutar Dağılımı
-            fig_bar = px.bar(
-                df_vade_dagilim,
+        with graph_col1a:
+            # Bar Chart - Fatura Vade Gruplarına Göre Tutar Dağılımı
+            fig_bar_fatura = px.bar(
+                df_fatura_vade_dagilim,
                 x='Vade Grubu',
                 y='Tutar (₺)',
                 text='Tutar (₺)',
-                title='Vade Gruplarına Göre Tutar Dağılımı',
+                title='Fatura Vade Gruplarına Göre Tutar',
                 color='Tutar (₺)',
                 color_continuous_scale='Blues'
             )
-            fig_bar.update_traces(texttemplate='₺%{text:,.0f}', textposition='outside')
-            fig_bar.update_layout(
+            fig_bar_fatura.update_traces(texttemplate='₺%{text:,.0f}', textposition='outside')
+            fig_bar_fatura.update_layout(
                 xaxis_title="Vade Grubu",
                 yaxis_title="Tutar (₺)",
                 showlegend=False,
                 height=400
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar_fatura, use_container_width=True)
         
-        with graph_col2:
-            # Pie Chart - Vade Gruplarına Göre Oran
-            fig_pie = px.pie(
-                df_vade_dagilim[df_vade_dagilim['Tutar (₺)'] > 0],
+        with graph_col2a:
+            # Pie Chart - Fatura Yüzde Dağılımı
+            fig_pie_fatura = px.pie(
+                df_fatura_vade_dagilim[df_fatura_vade_dagilim['Tutar (₺)'] > 0],
                 values='Tutar (₺)',
                 names='Vade Grubu',
-                title='Vade Gruplarına Göre Tutar Oranı (%)',
-                hole=0.4
+                title='Fatura Vade Oranları',
+                hole=0.4,
+                color_discrete_sequence=px.colors.sequential.Blues_r
             )
-            fig_pie.update_traces(
-                textposition='inside',
-                textinfo='percent+label',
-                hovertemplate='<b>%{label}</b><br>Tutar: ₺%{value:,.0f}<br>Oran: %{percent}<extra></extra>'
+            fig_pie_fatura.update_traces(texttemplate='%{label}<br>%{percent:.1%}', textposition='outside')
+            fig_pie_fatura.update_layout(height=400)
+            st.plotly_chart(fig_pie_fatura, use_container_width=True)
+        
+        st.divider()
+        st.markdown("#### 💳 Çek Vade Dağılımı")
+        graph_col1b, graph_col2b = st.columns(2)
+        
+        with graph_col1b:
+            # Bar Chart - Çek Vade Gruplarına Göre Tutar Dağılımı
+            fig_bar_cek = px.bar(
+                df_cek_vade_dagilim,
+                x='Vade Grubu',
+                y='Tutar (₺)',
+                text='Tutar (₺)',
+                title='Çek Vade Gruplarına Göre Tutar',
+                color='Tutar (₺)',
+                color_continuous_scale='Greens'
             )
-            fig_pie.update_layout(height=400)
-            st.plotly_chart(fig_pie, use_container_width=True)
+            fig_bar_cek.update_traces(texttemplate='₺%{text:,.0f}', textposition='outside')
+            fig_bar_cek.update_layout(
+                xaxis_title="Vade Grubu",
+                yaxis_title="Tutar (₺)",
+                showlegend=False,
+                height=400
+            )
+            st.plotly_chart(fig_bar_cek, use_container_width=True)
+        
+        with graph_col2b:
+            # Pie Chart - Çek Yüzde Dağılımı
+            fig_pie_cek = px.pie(
+                df_cek_vade_dagilim[df_cek_vade_dagilim['Tutar (₺)'] > 0],
+                values='Tutar (₺)',
+                names='Vade Grubu',
+                title='Çek Vade Oranları',
+                hole=0.4,
+                color_discrete_sequence=px.colors.sequential.Greens_r
+            )
+            fig_pie_cek.update_traces(texttemplate='%{label}<br>%{percent:.1%}', textposition='outside')
+            fig_pie_cek.update_layout(height=400)
+            st.plotly_chart(fig_pie_cek, use_container_width=True)
     
     with tab2:
         st.markdown("### 🎯 Fatura vs Çek Karşılaştırması")
@@ -961,22 +1086,16 @@ if st.session_state.faturalar and st.session_state.cekler:
             height=400
         )
     
-    # Vade dağılımı analizi
-    vade_gruplari = calculations.vade_analizi(tum_fatura_tutarlar, tum_valor_vadeler)
-    
+    # Vade dağılımı analizi - zaten yukarda hesaplandı, burada sadece göster
     col_analiz1, col_analiz2 = st.columns([1, 1])
     
     with col_analiz1:
-        st.markdown("#### 📈 Vade Dağılımı (Valör Bazlı)")
-        dagilim_data = []
-        for grup, data in vade_gruplari.items():
-            dagilim_data.append({
-                "Vade Grubu": grup,
-                "Tutar": f"₺{data['tutar']:,.0f}",
-                "Adet": data['adet'],
-                "Oran": f"{data['oran']:.1f}%"
-            })
-        st.dataframe(pd.DataFrame(dagilim_data), use_container_width=True, hide_index=True)
+        st.markdown("#### 📈 Fatura Vade Dağılımı (Valör Bazlı)")
+        # df_fatura_vade_dagilim zaten yukarıda hesaplandı, formatla ve göster
+        dagilim_display = df_fatura_vade_dagilim.copy()
+        dagilim_display['Tutar (₺)'] = dagilim_display['Tutar (₺)'].apply(lambda x: f"₺{x:,.0f}")
+        dagilim_display['Oran (%)'] = dagilim_display['Oran (%)'].apply(lambda x: f"{x:.1f}%")
+        st.dataframe(dagilim_display, use_container_width=True, hide_index=True)
     
     with col_analiz2:
         # Min-Max vadeler
