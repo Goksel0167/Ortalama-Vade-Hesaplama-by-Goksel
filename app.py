@@ -981,17 +981,32 @@ if st.session_state.faturalar and st.session_state.cekler:
     
     genel_ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_vade_gunler)
     
-    # Calculate OVERALL AVERAGE MATURITY (weighted average of invoice and check maturities)
-    if toplam_fatura > 0 and toplam_cek > 0:
-        genel_ort_genel = (toplam_fatura * genel_ort_valor + toplam_cek * genel_ort_cek) / (toplam_fatura + toplam_cek)
-    else:
-        genel_ort_genel = genel_ort_valor if toplam_fatura > 0 else genel_ort_cek
-    
-    # Calculate AVERAGE INVOICE MATURITY (from invoice date to value date)
-    tum_fatura_vade_gunleri = []
+    # Calculate AVERAGE INVOICE MATURITY (from TODAY to all invoice value dates)
+    bugun = datetime.now().date()
+    tum_fatura_bugundan_vade_gunleri = []
     for _, row in df_faturalar_filtered.iterrows():
-        tum_fatura_vade_gunleri.append(row['Vade (Gün)'])
-    genel_ort_fatura_vadesi = calculations.agirlikli_ortalama_vade_hesapla(tum_fatura_tutarlar, tum_fatura_vade_gunleri)
+        if row['Valör Tarihi Raw']:
+            gun_farki = (row['Valör Tarihi Raw'] - bugun).days
+            tum_fatura_bugundan_vade_gunleri.append(gun_farki)
+        else:
+            tum_fatura_bugundan_vade_gunleri.append(0)
+    genel_ort_fatura_vadesi = calculations.agirlikli_ortalama_vade_hesapla(tum_fatura_tutarlar, tum_fatura_bugundan_vade_gunleri)
+    
+    # Calculate AVERAGE CHECK MATURITY (from TODAY to all check maturity dates)
+    tum_cek_bugundan_vade_gunleri = []
+    for _, cek in df_cekler_filtered.iterrows():
+        if cek['Vade Tarihi Raw']:
+            gun_farki = (cek['Vade Tarihi Raw'] - bugun).days
+            tum_cek_bugundan_vade_gunleri.append(gun_farki)
+        else:
+            tum_cek_bugundan_vade_gunleri.append(0)
+    genel_ort_cek_vadesi = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_bugundan_vade_gunleri)
+    
+    # Calculate OVERALL AVERAGE MATURITY (weighted average of invoice and check maturities from TODAY)
+    if toplam_fatura > 0 and toplam_cek > 0:
+        genel_ort_genel = (toplam_fatura * genel_ort_fatura_vadesi + toplam_cek * genel_ort_cek_vadesi) / (toplam_fatura + toplam_cek)
+    else:
+        genel_ort_genel = genel_ort_fatura_vadesi if toplam_fatura > 0 else genel_ort_cek_vadesi
     
     # Maturity distribution analysis - INVOICES (Value based)
     vade_gruplari = calculations.vade_analizi(tum_fatura_tutarlar, tum_valor_vadeler)
@@ -1114,12 +1129,7 @@ if st.session_state.faturalar and st.session_state.cekler:
             <div class='metric-sublabel'>{t['days']}</div>
         </div>
         <div class='metric-block'>
-            <div class='metric-value' style='color: #fd7e14;'>{genel_ort_valor:.1f}</div>
-            <div class='metric-label'>{t['avg_value_maturity']}</div>
-            <div class='metric-sublabel'>{t['days']}</div>
-        </div>
-        <div class='metric-block'>
-            <div class='metric-value' style='color: #6f42c1;'>{genel_ort_cek:.1f}</div>
+            <div class='metric-value' style='color: #6f42c1;'>{genel_ort_cek_vadesi:.1f}</div>
             <div class='metric-label'>{t['avg_check_maturity']}</div>
             <div class='metric-sublabel'>{t['days']}</div>
         </div>
