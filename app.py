@@ -78,6 +78,8 @@ LANGUAGES = {
         'deficit': 'Eksik ⚠️',
         'avg_value_maturity': 'Ort. Valör Vadesi',
         'avg_check_maturity': 'Ort. Çek Vadesi',
+        'avg_invoice_maturity': 'Ort. Fatura Vadesi',
+        'avg_overall_maturity': 'Genel Ort. Vade',
         'download_results': '📥 Hesaplama Sonuçlarını İndir',
         'download_excel': '📥 Tüm Detayları Excel\'e İndir (Formatlanmış)',
         'excel_info': '💡 Excel dosyası 6 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler, Fatura Vade Dağılımı ve Çek Vade Dağılımı',
@@ -228,6 +230,8 @@ LANGUAGES = {
         'deficit': 'Deficit ⚠️',
         'avg_value_maturity': 'Avg. Value Maturity',
         'avg_check_maturity': 'Avg. Check Maturity',
+        'avg_invoice_maturity': 'Avg. Invoice Maturity',
+        'avg_overall_maturity': 'Overall Avg. Maturity',
         'download_results': '📥 Download Calculation Results',
         'download_excel': '📥 Download All Details to Excel (Formatted)',
         'excel_info': '💡 Excel file contains 6 sheets: Summary, Calculation Detail, Invoices, Checks, Invoice Maturity Distribution and Check Maturity Distribution',
@@ -977,6 +981,18 @@ if st.session_state.faturalar and st.session_state.cekler:
     
     genel_ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_vade_gunler)
     
+    # Calculate OVERALL AVERAGE MATURITY (weighted average of invoice and check maturities)
+    if toplam_fatura > 0 and toplam_cek > 0:
+        genel_ort_genel = (toplam_fatura * genel_ort_valor + toplam_cek * genel_ort_cek) / (toplam_fatura + toplam_cek)
+    else:
+        genel_ort_genel = genel_ort_valor if toplam_fatura > 0 else genel_ort_cek
+    
+    # Calculate AVERAGE INVOICE MATURITY (from invoice date to value date)
+    tum_fatura_vade_gunleri = []
+    for _, row in df_faturalar_filtered.iterrows():
+        tum_fatura_vade_gunleri.append(row['Vade (Gün)'])
+    genel_ort_fatura_vadesi = calculations.agirlikli_ortalama_vade_hesapla(tum_fatura_tutarlar, tum_fatura_vade_gunleri)
+    
     # Maturity distribution analysis - INVOICES (Value based)
     vade_gruplari = calculations.vade_analizi(tum_fatura_tutarlar, tum_valor_vadeler)
     df_fatura_vade_dagilim = pd.DataFrame([
@@ -1093,6 +1109,11 @@ if st.session_state.faturalar and st.session_state.cekler:
             <div class='metric-sublabel'>{t['surplus'] if toplam_cek - toplam_fatura >= 0 else t['deficit']}</div>
         </div>
         <div class='metric-block'>
+            <div class='metric-value' style='color: #17a2b8;'>{genel_ort_fatura_vadesi:.1f}</div>
+            <div class='metric-label'>{t['avg_invoice_maturity']}</div>
+            <div class='metric-sublabel'>{t['days']}</div>
+        </div>
+        <div class='metric-block'>
             <div class='metric-value' style='color: #fd7e14;'>{genel_ort_valor:.1f}</div>
             <div class='metric-label'>{t['avg_value_maturity']}</div>
             <div class='metric-sublabel'>{t['days']}</div>
@@ -1101,6 +1122,11 @@ if st.session_state.faturalar and st.session_state.cekler:
             <div class='metric-value' style='color: #6f42c1;'>{genel_ort_cek:.1f}</div>
             <div class='metric-label'>{t['avg_check_maturity']}</div>
             <div class='metric-sublabel'>{t['days']}</div>
+        </div>
+        <div class='metric-block'>
+            <div class='metric-value' style='color: #28a745; font-weight: 900;'>{genel_ort_genel:.1f}</div>
+            <div class='metric-label' style='font-weight: 700;'>{t['avg_overall_maturity']}</div>
+            <div class='metric-sublabel' style='font-weight: 600;'>{t['days']}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
