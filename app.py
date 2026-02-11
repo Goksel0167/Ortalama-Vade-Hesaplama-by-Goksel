@@ -80,9 +80,9 @@ LANGUAGES = {
         'avg_check_maturity': 'Ort. Çek Vadesi',
         'avg_invoice_maturity': 'Ort. Fatura Vadesi',
         'avg_overall_maturity': 'Vade Farkı',
-        'avg_invoice_maturity_subtitle': 'Bugünden',
-        'avg_check_maturity_subtitle': 'Bugünden',
-        'avg_overall_maturity_subtitle': 'Çek - Fatura',
+        'avg_invoice_maturity_subtitle': 'Fatura-Valör',
+        'avg_check_maturity_subtitle': 'Fatura-Çek',
+        'avg_overall_maturity_subtitle': 'Çek - Valör',
         'download_results': '📥 Hesaplama Sonuçlarını İndir',
         'download_excel': '📥 Tüm Detayları Excel\'e İndir (Formatlanmış)',
         'excel_info': '💡 Excel dosyası 6 sayfa içerir: Özet, Hesaplama Detayı, Faturalar, Çekler, Fatura Vade Dağılımı ve Çek Vade Dağılımı',
@@ -235,9 +235,9 @@ LANGUAGES = {
         'avg_check_maturity': 'Avg. Check Maturity',
         'avg_invoice_maturity': 'Avg. Invoice Maturity',
         'avg_overall_maturity': 'Maturity Gap',
-        'avg_invoice_maturity_subtitle': 'From Today',
-        'avg_check_maturity_subtitle': 'From Today',
-        'avg_overall_maturity_subtitle': 'Check - Invoice',
+        'avg_invoice_maturity_subtitle': 'Invoice-Value',
+        'avg_check_maturity_subtitle': 'Invoice-Check',
+        'avg_overall_maturity_subtitle': 'Check - Value',
         'download_results': '📥 Download Calculation Results',
         'download_excel': '📥 Download All Details to Excel (Formatted)',
         'excel_info': '💡 Excel file contains 6 sheets: Summary, Calculation Detail, Invoices, Checks, Invoice Maturity Distribution and Check Maturity Distribution',
@@ -987,48 +987,59 @@ if st.session_state.faturalar and st.session_state.cekler:
     
     genel_ort_cek = calculations.agirlikli_ortalama_vade_hesapla(tum_cek_tutarlar, tum_cek_vade_gunler)
     
-    # === MUHASEBE MANTIĞI: AĞIRLIKLI ORTALAMA TARİH HESAPLAMA ===
+    # === MUHASEBE MANTIĞI: DOĞRU AĞIRLIKLI ORTALAMA TARİH HESAPLAMA ===
     
-    # 1. ORTALAMA FATURA VALÖR TARİHİNİ HESAPLA (ağırlıklı ortalama tarih)
-    referans_tarihi = datetime.now().date()  # Referans noktası olarak bugünü kullan
+    # Referans tarihi: 1 Ocak 1970 (timestamp mantığı)
+    epoch = datetime(1970, 1, 1).date()
     
-    agirlikli_toplam_fatura_gun = 0
+    # 1. ORTALAMA FATURA TARİHİNİ HESAPLA
+    agirlikli_fatura_tarihi_toplam = 0
     for _, row in df_faturalar_filtered.iterrows():
-        if row['Valör Tarihi Raw']:
-            gun_farki = (row['Valör Tarihi Raw'] - referans_tarihi).days
-            agirlikli_toplam_fatura_gun += row['Tutar'] * gun_farki
+        if row['Fatura Tarihi Raw']:
+            gun_farki = (row['Fatura Tarihi Raw'] - epoch).days
+            agirlikli_fatura_tarihi_toplam += row['Tutar'] * gun_farki
     
     if toplam_fatura > 0:
-        ortalama_fatura_gun = agirlikli_toplam_fatura_gun / toplam_fatura
-        ortalama_fatura_tarihi = referans_tarihi + timedelta(days=ortalama_fatura_gun)
+        ortalama_fatura_gun = agirlikli_fatura_tarihi_toplam / toplam_fatura
+        ortalama_fatura_tarihi_hesaplanan = epoch + timedelta(days=ortalama_fatura_gun)
     else:
-        ortalama_fatura_gun = 0
-        ortalama_fatura_tarihi = referans_tarihi
+        ortalama_fatura_tarihi_hesaplanan = datetime.now().date()
     
-    # 2. ORTALAMA ÇEK VADE TARİHİNİ HESAPLA (ağırlıklı ortalama tarih)
-    agirlikli_toplam_cek_gun = 0
+    # 2. ORTALAMA VALÖR TARİHİNİ HESAPLA
+    agirlikli_valor_tarihi_toplam = 0
+    for _, row in df_faturalar_filtered.iterrows():
+        if row['Valör Tarihi Raw']:
+            gun_farki = (row['Valör Tarihi Raw'] - epoch).days
+            agirlikli_valor_tarihi_toplam += row['Tutar'] * gun_farki
+    
+    if toplam_fatura > 0:
+        ortalama_valor_gun = agirlikli_valor_tarihi_toplam / toplam_fatura
+        ortalama_valor_tarihi = epoch + timedelta(days=ortalama_valor_gun)
+    else:
+        ortalama_valor_tarihi = datetime.now().date()
+    
+    # 3. ORTALAMA ÇEK VADE TARİHİNİ HESAPLA
+    agirlikli_cek_tarihi_toplam = 0
     for _, cek in df_cekler_filtered.iterrows():
         if cek['Vade Tarihi Raw']:
-            gun_farki = (cek['Vade Tarihi Raw'] - referans_tarihi).days
-            agirlikli_toplam_cek_gun += cek['Tutar'] * gun_farki
+            gun_farki = (cek['Vade Tarihi Raw'] - epoch).days
+            agirlikli_cek_tarihi_toplam += cek['Tutar'] * gun_farki
     
     if toplam_cek > 0:
-        ortalama_cek_gun = agirlikli_toplam_cek_gun / toplam_cek
-        ortalama_cek_tarihi = referans_tarihi + timedelta(days=ortalama_cek_gun)
+        ortalama_cek_gun = agirlikli_cek_tarihi_toplam / toplam_cek
+        ortalama_cek_tarihi = epoch + timedelta(days=ortalama_cek_gun)
     else:
-        ortalama_cek_gun = 0
-        ortalama_cek_tarihi = referans_tarihi
+        ortalama_cek_tarihi = datetime.now().date()
     
-    # 3. METRIC CARD'LARDA GÖSTERİLECEK DEĞERLERİ HESAPLA
-    # Ortalama Fatura Vadesi = Bugünden ortalama fatura valör tarihine kadar gün
-    genel_ort_fatura_vadesi = (ortalama_fatura_tarihi - datetime.now().date()).days
+    # 4. METRIC CARD DEĞERLERİ - Ortalama Fatura Tarihinden İtibaren
+    # Ortalama Fatura Vadesi = Ortalama Valör Tarihi - Ortalama Fatura Tarihi
+    genel_ort_fatura_vadesi = (ortalama_valor_tarihi - ortalama_fatura_tarihi_hesaplanan).days
     
-    # Ortalama Çek Vadesi = Bugünden ortalama çek vade tarihine kadar gün
-    genel_ort_cek_vadesi = (ortalama_cek_tarihi - datetime.now().date()).days
+    # Ortalama Çek Vadesi = Ortalama Çek Tarihi - Ortalama Fatura Tarihi
+    genel_ort_cek_vadesi = (ortalama_cek_tarihi - ortalama_fatura_tarihi_hesaplanan).days
     
-    # 4. GENEL ORTALAMA VADE = Ortalama Çek Tarihi - Ortalama Fatura Tarihi
-    # Bu, çeklerin faturalardan ortalama kaç gün sonra vade dolduğunu gösterir
-    genel_ort_genel = (ortalama_cek_tarihi - ortalama_fatura_tarihi).days
+    # Vade Farkı = Çek Vadesi - Fatura Vadesi
+    genel_ort_genel = genel_ort_cek_vadesi - genel_ort_fatura_vadesi
     
     # Maturity distribution analysis - INVOICES (Value based)
     vade_gruplari = calculations.vade_analizi(tum_fatura_tutarlar, tum_valor_vadeler)
